@@ -86,9 +86,15 @@ body {
   border: 1.5px solid rgba(255,255,255,.25);
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.8rem;
   flex-shrink: 0;
   backdrop-filter: blur(4px);
+  overflow: hidden;
+}
+.header-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .header-text h1 {
   font-family: 'Barlow Condensed', sans-serif;
@@ -652,7 +658,7 @@ h2 .h2-icon {
 <div class="wrap">
   <div class="site-header">
     <div class="header-inner">
-      <div class="header-logo">🏗️</div>
+      <div class="header-logo"><img src="logo.svg" alt="XCMG logo"></div>
       <div class="header-text">
         <h1>XCMG Knowledge Academy</h1>
         <p>หลักสูตรความรู้ผลิตภัณฑ์ XCMG — E-Learning Platform</p>
