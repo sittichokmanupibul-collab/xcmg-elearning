@@ -5,13 +5,13 @@ export async function registerUser(email, password, fullName) {
         email: email,
         password: password,
         options: {
-            data: { full_name: fullName } // ส่งข้อมูลไปให้ Database Trigger ใช้งาน
+            data: { full_name: fullName }
         }
     });
 
     if (error) {
         console.error("Supabase Error:", error);
-        alert("สมัครสมาชิกไม่สำเร็จ: " + error.message); // ดูข้อความ error ที่นี่
+        alert("สมัครสมาชิกไม่สำเร็จ: " + error.message);
         return null;
     }
 

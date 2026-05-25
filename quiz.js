@@ -1,11 +1,8 @@
-// quiz.js — ดึงคำถาม + บันทึกผลข้อสอบ
 import { supabase } from './supabase.js'
 
-// ── ฟังก์ชันคำนวณคะแนน ───────────────────────────────────────────────────
 function calcScore(answers, questions) {
   let score = 0
   questions.forEach((q, index) => {
-    // ถ้าข้อที่ตอบ ตรงกับ correct_index ในฐานข้อมูล จะได้ 1 คะแนน
     if (answers[index] !== undefined && parseInt(answers[index]) === q.correct_index) {
       score++
     }
@@ -13,7 +10,6 @@ function calcScore(answers, questions) {
   return score
 }
 
-// ── ดึงคำถามจาก Supabase ──────────────────────────────────────────────────
 export async function fetchQuestions(quizType) {
   const { data, error } = await supabase
     .from('questions')
@@ -28,7 +24,6 @@ export async function fetchQuestions(quizType) {
   return data
 }
 
-// ── บันทึกผล Pre-Test ─────────────────────────────────────────────────────────
 export async function savePreTest(userId, answers, questions) {
   const score = calcScore(answers, questions)
 
@@ -39,16 +34,15 @@ export async function savePreTest(userId, answers, questions) {
       quiz_type: 'pre',
       score: score,
       total_questions: questions.length,
-      passed: false // ใส่ไว้กันเหนียว กรณี DB บังคับว่าห้ามเป็นค่าว่าง
+      passed: false
     })
 
   if (error) console.error('savePreTest error:', error.message)
 }
 
-// ── บันทึกผล Post-Test ────────────────────────────────────────────────────────
 export async function savePostTest(userId, answers, questions) {
   const score = calcScore(answers, questions)
-  const passed = score / questions.length >= 0.6 // เกณฑ์ผ่าน 60%
+  const passed = score / questions.length >= 0.6
 
   const { error } = await supabase
     .from('quiz_attempts')
@@ -57,7 +51,7 @@ export async function savePostTest(userId, answers, questions) {
       quiz_type: 'post',
       score: score,
       total_questions: questions.length,
-      passed: passed // [แก้แล้ว] เพิ่มตัวแปร passed ส่งเข้าไปใน Database ด้วย
+      passed: passed
     })
 
   if (error) console.error('savePostTest error:', error.message)
@@ -70,7 +64,6 @@ export async function savePostTest(userId, answers, questions) {
   }
 }
 
-// ── ดึงประวัติการสอบ ─────────────────────────────────────────────────────────
 export async function getAttemptHistory(userId) {
   const { data, error } = await supabase
     .from('quiz_attempts')
@@ -85,7 +78,6 @@ export async function getAttemptHistory(userId) {
   return data ?? []
 }
 
-// ── ตรวจสอบว่า Post-Test ผ่านแล้วหรือยัง ─────────────────────────────────────
 export async function hasPassedPostTest(userId) {
   const { data, error } = await supabase
     .from('quiz_attempts')
@@ -94,7 +86,7 @@ export async function hasPassedPostTest(userId) {
     .eq('quiz_type', 'post')
     .eq('passed', true)
     .limit(1)
-    .maybeSingle() // [แก้แล้ว] เปลี่ยนจาก single() เป็น maybeSingle() ป้องกันเว็บพังถ้าไม่เคยสอบ
+    .maybeSingle()
 
   if (error) {
     console.error("hasPassedPostTest error:", error.message)

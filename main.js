@@ -1,36 +1,29 @@
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  main.js — XCMG Knowledge Academy                                       ║
-// ║  แก้ไขส่วน CONFIG ด้านล่างเพียงจุดเดียวเพื่อเปลี่ยนเนื้อหา            ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
-
 import { supabase } from './supabase.js'
 
 // ════════════════════════════════════════════════════════════════════════════
-// ██  CONFIG — แก้ตรงนี้เพียงจุดเดียว  ██
+// ██  CONFIG  ██
 // ════════════════════════════════════════════════════════════════════════════
 
-// ══ วิธีใส่ลิงก์วิดีโอ ══
-// ใส่ได้ทั้ง YouTube URL เต็ม หรือแค่ Video ID
-// เช่น 'https://www.youtube.com/watch?v=VJkImB3ZC2Y'
-//      'https://youtu.be/VJkImB3ZC2Y'
-//      'VJkImB3ZC2Y'
+const CERT_TEMPLATE_URL = '/assets/cert-template.png';
+const SIGNATURE_URL     = '/assets/signature.png';
+
+const XCMG_BLUE = '#1B3A6B';
+const TEXT_DARK = '#2C3E50';
+
 function extractYouTubeId(input) {
   if (!input) return ''
-  // ถ้าเป็น URL — ดึง ID ออกมา
   const patterns = [
-    /[?&]v=([^&#]+)/,          // youtube.com/watch?v=ID
-    /youtu\.be\/([^?&#]+)/,    // youtu.be/ID
-    /embed\/([^?&#]+)/,        // youtube.com/embed/ID
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /embed\/([^?&#]+)/,
   ]
   for (const re of patterns) {
     const m = input.match(re)
     if (m) return m[1]
   }
-  // ถ้าไม่ match pattern ไหนเลย ถือว่าเป็น ID โดยตรง
   return input.trim()
 }
 
-// ══ แก้ตรงนี้เพียงจุดเดียว — ใส่ URL หรือ ID ก็ได้ ══
 const EPISODE_VIDEO_IDS = {
   1: 'VJkImB3ZC2Y',
   2: 'VJkImB3ZC2Y',
@@ -45,8 +38,6 @@ const EPISODE_TITLES = {
   4: 'ตอนที่ 4'
 };
 
-// คำถาม Pre-Test (10 ข้อ) — แก้ข้อความและตัวเลือกได้ตามต้องการ
-// correct_index: 0=A, 1=B, 2=C, 3=D
 const PRE_QUESTIONS = [
   {
     question_text: 'XCMG ก่อตั้งขึ้นในปีใด?',
@@ -100,7 +91,6 @@ const PRE_QUESTIONS = [
   },
 ]
 
-// คำถาม Post-Test (10 ข้อ) — แก้ข้อความและตัวเลือกได้ตามต้องการ
 const POST_QUESTIONS = [
   {
     question_text: 'XCMG มีจำนวนพนักงานทั่วโลกประมาณเท่าใด?',
@@ -196,7 +186,7 @@ window.showScreen = function(id) {
 // ════════════════════════════════════════════════════════════════════════════
 // ██  HELPERS  ██
 // ════════════════════════════════════════════════════════════════════════════
-function btn(id)         { return document.getElementById(id) }
+function btn(id)            { return document.getElementById(id) }
 function setDisabled(id, v) { const b = btn(id); if (b) b.disabled = v }
 
 function setLoading(id, loading, label) {
@@ -207,71 +197,54 @@ function setLoading(id, loading, label) {
 }
 
 function normalizeName(name) {
-  return name.replace(/\s+/g, ' ').trim()
+  return name ? name.replace(/\s+/g, ' ').trim() : ''
+}
+
+function formatThaiDate(dateString) {
+  const thaiMonths = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน',
+    'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม',
+    'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  const date = dateString ? new Date(dateString) : new Date();
+  const d = date.getDate();
+  const m = thaiMonths[date.getMonth()];
+  const y = date.getFullYear() + 543;
+  return `${d} ${m} ${y}`;
 }
 
 function renderTextImage(text, options = {}) {
   const {
-    width = 1600,
-    height = 220,
-    fontFamily = 'Noto Sans Thai, Sarabun, Helvetica, Arial, sans-serif',
+    width = 1800,
+    height = 200,
+    fontFamily = 'Sarabun, Noto Sans Thai, Helvetica, Arial, sans-serif',
     fontWeight = 'bold',
     color = XCMG_BLUE,
-    alpha = 1,
-    maxLineWidth = 1480,
-    initialFontSize = 72,
-    minFontSize = 20,
-    lineHeightFactor = 1.2,
+    maxLineWidth = 1700,
+    initialFontSize = 64,
   } = options;
 
   const canvas = document.createElement('canvas');
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = 2;
   canvas.width = width * dpr;
   canvas.height = height * dpr;
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
 
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
-  ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
 
   let fontSize = initialFontSize;
-  const setFont = () => { ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`; };
-  setFont();
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
-  const wrapText = (value) => {
-    const words = value.split(' ');
-    const lines = [''];
-    for (const word of words) {
-      const testLine = lines[lines.length - 1] ? `${lines[lines.length - 1]} ${word}` : word;
-      if (ctx.measureText(testLine).width <= maxLineWidth) {
-        lines[lines.length - 1] = testLine;
-      } else {
-        lines.push(word);
-      }
-    }
-    return lines;
-  };
-
-  let lines = wrapText(text);
-  while ((lines.length > 2 || ctx.measureText(lines[0]).width > maxLineWidth) && fontSize > minFontSize) {
+  while (ctx.measureText(text).width > maxLineWidth && fontSize > 20) {
     fontSize -= 2;
-    setFont();
-    lines = wrapText(text);
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   }
 
-  const lineHeight = fontSize * lineHeightFactor;
-  const totalHeight = lineHeight * lines.length;
-  const startY = height / 2 - totalHeight / 2 + lineHeight / 2;
-
-  lines.forEach((line, index) => {
-    ctx.fillText(line, width / 2, startY + index * lineHeight);
-  });
-
+  ctx.fillText(text, width / 2, height / 2);
   return canvas.toDataURL('image/png');
 }
 
@@ -280,12 +253,28 @@ async function loadCertificateFonts() {
   await document.fonts.ready
   if (document.fonts.load) {
     await Promise.all([
-      document.fonts.load('400 16px Noto Sans Thai'),
-      document.fonts.load('700 16px Noto Sans Thai'),
       document.fonts.load('400 16px Sarabun'),
       document.fonts.load('700 16px Sarabun'),
+      document.fonts.load('400 16px Noto Sans Thai'),
+      document.fonts.load('700 16px Noto Sans Thai'),
     ]).catch(() => {})
   }
+}
+
+function fetchImageAsBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('ไม่สามารถโหลดภาพแม่แบบได้'));
+    img.src = url;
+  });
 }
 
 function renderQuiz(questions, containerId, storeKey, submitBtnId) {
@@ -293,13 +282,14 @@ function renderQuiz(questions, containerId, storeKey, submitBtnId) {
   if (!el) return
   el.innerHTML = questions.map((q, i) => `
     <div class="quiz-question">
-      <p><strong>ข้อ ${i + 1}.</strong> ${q.question_text}</p>
+      <p><span class="quiz-q-num">${i + 1}</span>${q.question_text}</p>
       <div class="quiz-options">
         ${q.options.map((opt, j) => `
           <label>
             <input type="radio" name="q${storeKey}${i}" value="${j}"
               onchange="window._answer('${storeKey}',${i},${j},'${submitBtnId}',${questions.length})">
-            <span class="opt-letter">${['A','B','C','D'][j]}</span> ${opt}
+            <span class="opt-letter">${['A','B','C','D'][j]}</span>
+            <span>${opt}</span>
           </label>`).join('')}
       </div>
     </div>`).join('')
@@ -316,17 +306,16 @@ window._answer = function(storeKey, qi, val, submitId, total) {
 // ██  1. REGISTER  ██
 // ════════════════════════════════════════════════════════════════════════════
 window.handleRegister = async function() {
-  const nameInput  = document.getElementById('regName').value
-  const name       = normalizeName(nameInput)
-  const empId      = document.getElementById('regId').value.trim()
-  const email      = document.getElementById('regEmail').value.trim()
-  const dept       = document.getElementById('regDept').value.trim()
+  const nameInput = document.getElementById('regName').value
+  const name      = normalizeName(nameInput)
+  const empId     = document.getElementById('regId').value.trim()
+  const email     = document.getElementById('regEmail').value.trim()
+  const dept      = document.getElementById('regDept').value.trim()
 
   if (!name || !email) { alert('กรุณากรอกชื่อและอีเมลให้ครบ'); return }
 
   setLoading('registerBtn', true, 'เริ่มต้นเรียน →')
   try {
-    // Sign up (ถ้าอีเมลซ้ำ → sign in แทน)
     let userId, userEmail
     const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
       email, password: 'XCMGlearn2024!',
@@ -339,17 +328,16 @@ window.handleRegister = async function() {
           email, password: 'XCMGlearn2024!'
         })
         if (signInErr) { alert('อีเมลนี้ลงทะเบียนแล้ว กรุณาติดต่อผู้ดูแลระบบ'); return }
-        userId = signInData.user.id
+        userId    = signInData.user.id
         userEmail = signInData.user.email
       } else {
         alert('สมัครสมาชิกไม่สำเร็จ: ' + signUpErr.message); return
       }
     } else {
-      userId = signUpData.user.id
+      userId    = signUpData.user.id
       userEmail = signUpData.user.email
     }
 
-    // upsert โปรไฟล์
     await supabase.from('users').upsert({
       id: userId, full_name: name, emp_id: empId,
       email: userEmail, department: dept, role: 'user'
@@ -357,7 +345,6 @@ window.handleRegister = async function() {
 
     state.user = { id: userId, email: userEmail, full_name: name, emp_id: empId, department: dept }
 
-    // render pre-test แล้วเปลี่ยนหน้า
     renderQuiz(PRE_QUESTIONS, 'preTestContainer', 'pre', 'preSubmitBtn')
     window.showScreen('screen-1')
 
@@ -375,34 +362,26 @@ window.handleRegister = async function() {
 window.handlePreTestSubmit = async function() {
   setLoading('preSubmitBtn', true, 'ส่งคำตอบและเริ่มดูวิดีโอ →')
   try {
-    // 1. คำนวณคะแนน Pre-Test
     let score = 0
     PRE_QUESTIONS.forEach((q, i) => {
       if (parseInt(state.preAnswers[i]) === q.correct_index) score++
     })
 
-    // 2. แสดงผลคะแนนให้ผู้เรียนรับทราบทันทีตามที่ต้องการ
-    alert(`บันทึกคำตอบ Pre-Test เรียบร้อยแล้ว!\n\nคุณได้คะแนน: ${score} จากทั้งหมด ${PRE_QUESTIONS.length} ข้อ\n(กด ตกลง เพื่อเข้าสู่หน้าบทเรียนวิดีโอ)`);
+    alert(`บันทึกคำตอบ Pre-Test เรียบร้อยแล้ว!\n\nคุณได้คะแนน: ${score} จากทั้งหมด ${PRE_QUESTIONS.length} ข้อ\n(กด ตกลง เพื่อเข้าสู่หน้าบทเรียนวิดีโอ)`)
 
-    // 3. บันทึกคำตอบลงฐานข้อมูลด้วยโครงสร้างที่ถูกต้อง (ไม่มี .catch ต่อท้ายตัวเมธอดตรงๆ)
-    if (state.user && state.user.id) {
+    if (state.user?.id) {
       const { error } = await supabase.from('quiz_attempts').insert({
-        user_id: state.user.id, 
-        quiz_type: 'pre',
-        score: score, 
-        total_questions: PRE_QUESTIONS.length, 
-        passed: false
+        user_id: state.user.id, quiz_type: 'pre',
+        score, total_questions: PRE_QUESTIONS.length, passed: false
       })
-      if (error) console.warn('Supabase insert pre-test error:', error.message)
+      if (error) console.warn('pre-test insert:', error.message)
     }
 
-    // 4. เปลี่ยนหน้าไปยังขั้นตอนรับชมวิดีโอ
     window.showScreen('screen-2')
     initVideoScreen()
 
   } catch (err) {
-    console.error('Pre-test submission process error:', err)
-    // หากส่วนการบันทึกพัง จะสลับหน้าจอไปที่วิดีโอทันทีเพื่อไม่ให้ระบบล็อก
+    console.error(err)
     window.showScreen('screen-2')
     initVideoScreen()
   } finally {
@@ -423,17 +402,13 @@ function updateEpButtons() {
     const b = btn(`ep${i}`)
     if (!b) continue
     const done = state.episodesDone.has(i)
-    b.disabled  = false  // ปลดล็อกทุก EP ให้กดได้
+    b.disabled  = false
     b.className = 'ep-btn' + (done ? ' watched' : '') + (state.currentEp === i ? ' current' : '')
-    b.innerHTML = (done ? '✅ ' : '▶ ') + `EP ${i}`
+    b.innerHTML = (done ? '✅ ' : '▶ ') + `EP ${i}<span class="ep-ep-num">ตอนที่ ${i}</span>`
   }
-  // ปุ่ม "ทำแบบทดสอบ" เปิดตลอด (ไม่บังคับดูครบ)
   setDisabled('videoNextBtn', false)
 }
 
-// YouTube IFrame API
-// ⚠️ ต้องประกาศ window.onYouTubeIframeAPIReady ก่อน inject <script> เสมอ
-//    เพราะ ES Module โหลด async — YouTube อาจ fire callback ก่อน module พร้อม
 window.onYouTubeIframeAPIReady = function() {
   state.ytReady = true
   if (state.pendingVideoId != null) {
@@ -443,13 +418,8 @@ window.onYouTubeIframeAPIReady = function() {
   }
 }
 
-// Inject YouTube script หลังจาก callback ลงทะเบียนแล้ว
 ;(function loadYouTubeAPI() {
-  if (window.YT && window.YT.Player) {
-    // API โหลดอยู่แล้ว — fire callback ทันที
-    window.onYouTubeIframeAPIReady()
-    return
-  }
+  if (window.YT && window.YT.Player) { window.onYouTubeIframeAPIReady(); return }
   const tag = document.createElement('script')
   tag.src = 'https://www.youtube.com/iframe_api'
   document.head.appendChild(tag)
@@ -461,42 +431,35 @@ function loadEpisode(ep) {
   state.maxWatched = 0
   if (state.saveTimer) { clearInterval(state.saveTimer); state.saveTimer = null }
 
-  // อัปเดตชื่อตอน
   const titleEl = document.getElementById('epTitle')
-  if (titleEl) titleEl.textContent = EPISODE_TITLES[ep] || `ตอนที่ ${ep}`
+  if (titleEl) titleEl.textContent = '🎥 ' + (EPISODE_TITLES[ep] || `ตอนที่ ${ep}`)
 
   updateEpButtons()
-
   const videoId = extractYouTubeId(EPISODE_VIDEO_IDS[ep])
 
   if (state.ytReady) {
     createPlayer(videoId, ep)
   } else {
-    // เก็บไว้รอ onYouTubeIframeAPIReady
     state.pendingVideoId = videoId
     state.pendingEp = ep
   }
 }
 
 function createPlayer(videoId, ep) {
-  // ทำลาย player เก่า
   if (state.ytPlayer && typeof state.ytPlayer.destroy === 'function') {
     try { state.ytPlayer.destroy() } catch(e) {}
     state.ytPlayer = null
   }
-  // รีเซ็ต div
   const container = document.getElementById('yt-player')
   if (!container) return
   container.innerHTML = '<div id="yt-inner"></div>'
 
   state.ytPlayer = new YT.Player('yt-inner', {
     videoId,
-    width: '100%',
-    height: '100%',
+    width: '100%', height: '100%',
     playerVars: { rel: 0, modestbranding: 1, disablekb: 0, fs: 1 },
     events: {
       onReady: () => {
-        // บันทึก progress ทุก 5 วินาที
         if (state.saveTimer) clearInterval(state.saveTimer)
         state.saveTimer = setInterval(async () => {
           if (!state.ytPlayer || typeof state.ytPlayer.getPlayerState !== 'function') return
@@ -504,14 +467,12 @@ function createPlayer(videoId, ep) {
           const cur = Math.floor(state.ytPlayer.getCurrentTime())
           if (cur > state.maxWatched) {
             state.maxWatched = cur
-            // บันทึก DB (non-blocking)
             supabase.from('video_progress').upsert({
               user_id: state.user?.id, episode: ep,
               max_watched_sec: state.maxWatched, completed: false,
               updated_at: new Date().toISOString()
             }, { onConflict: 'user_id,episode' }).then(null, () => {})
           }
-          // Anti-skip: ถ้ากระโดดข้ามไปมากกว่า 5 วินาที ดีดกลับ
           if (cur > state.maxWatched + 5) {
             state.ytPlayer.seekTo(state.maxWatched, true)
           }
@@ -521,18 +482,15 @@ function createPlayer(videoId, ep) {
         if (event.data === YT.PlayerState.ENDED) {
           if (state.saveTimer) { clearInterval(state.saveTimer); state.saveTimer = null }
           state.episodesDone.add(ep)
-          // บันทึก completed
           const { error: vpErr } = await supabase.from('video_progress').upsert({
             user_id: state.user?.id, episode: ep,
             completed: true, updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,episode' })
-          if (vpErr) console.warn('video_progress upsert skipped:', vpErr.message)
+          if (vpErr) console.warn('video_progress upsert:', vpErr.message)
           updateEpButtons()
-          // auto โหลด ep ถัดไป
           if (ep < 4) {
             setTimeout(() => loadEpisode(ep + 1), 800)
           } else {
-            // ดูครบ 4 ตอน
             showToast('🎉 ดูวิดีโอครบทุกตอนแล้ว! กดปุ่มด้านล่างเพื่อทำแบบทดสอบ')
           }
         }
@@ -544,8 +502,6 @@ function createPlayer(videoId, ep) {
 window.selectEpisode = function(ep) { loadEpisode(ep) }
 
 window.handleVideoStepComplete = async function() {
-  // หมายเหตุ: ถ้าต้องการบังคับดูครบ ให้เปิด comment บรรทัดด้านล่าง
-  // if (state.episodesDone.size < 4) { alert('กรุณารับชมวิดีโอให้ครบทุก 4 ตอนก่อน'); return }
   renderQuiz(POST_QUESTIONS, 'postTestContainer', 'post', 'postSubmitBtn')
   window.showScreen('screen-3')
 }
@@ -566,12 +522,11 @@ window.handlePostTestSubmit = async function() {
 
     state.lastResult = { score, total, percent, passed }
 
-    // บันทึก DB
     const { error: postErr } = await supabase.from('quiz_attempts').insert({
       user_id: state.user.id, quiz_type: 'post',
       score, total_questions: total, passed
     })
-    if (postErr) console.warn('savePostTest skipped:', postErr.message)
+    if (postErr) console.warn('savePostTest:', postErr.message)
 
     if (passed) await issueCertificate(percent)
 
@@ -592,24 +547,37 @@ window.handlePostTestSubmit = async function() {
 function renderResult(result) {
   const el = document.getElementById('scoreResult')
   if (!el) return
+
   el.innerHTML = `
-    <div class="score-big">${result.percent}%</div>
-    <span class="score-badge ${result.passed ? 'pass' : 'fail'}">
-      ${result.passed ? '🎉 ผ่านการทดสอบ!' : '❌ ไม่ผ่าน — ลองใหม่ได้เลย'}
-    </span>
-    <p style="text-align:center;margin-top:12px;color:#666;">
-      ได้คะแนน <strong>${result.score}</strong> จาก <strong>${result.total}</strong> ข้อ
-      ${!result.passed ? '<br><small>(เกณฑ์ผ่าน 60% = 6 ข้อขึ้นไป)</small>' : ''}
-    </p>`
+    <div class="result-card">
+      <div class="score-ring ${result.passed ? 'pass' : 'fail'}">
+        <div class="score-pct">${result.percent}%</div>
+        <div class="score-label">คะแนน</div>
+      </div>
+      <div class="result-status ${result.passed ? 'pass' : 'fail'}">
+        ${result.passed ? '🎉 ผ่านการทดสอบ!' : '❌ ยังไม่ผ่าน — ลองใหม่ได้เลย'}
+      </div>
+      <div class="result-detail">
+        ได้ <strong>${result.score}</strong> คะแนน จากทั้งหมด <strong>${result.total}</strong> ข้อ
+        ${!result.passed ? '<br><small style="opacity:.75">(เกณฑ์ผ่าน 60% = 6 ข้อขึ้นไป)</small>' : ''}
+      </div>
+    </div>`
 
   const dlBtn = document.getElementById('downloadCertBtn')
-  if (dlBtn) dlBtn.style.display = result.passed ? 'block' : 'none'
+  if (dlBtn) dlBtn.style.display = result.passed ? 'flex' : 'none'
 
   const retryBox = document.getElementById('retryContainer')
   if (retryBox) {
     retryBox.innerHTML = !result.passed
-      ? `<button onclick="window.retakePost()" style="background:#e65100;">🔄 ทำแบบทดสอบใหม่อีกครั้ง</button>`
+      ? `<button class="btn btn-outline" onclick="window.retakePost()">🔄 ทำแบบทดสอบใหม่อีกครั้ง</button>`
       : ''
+  }
+
+  if (result.passed) {
+    renderCertPreview()
+  } else {
+    const cp = document.getElementById('certPreviewContainer')
+    if (cp) cp.innerHTML = ''
   }
 }
 
@@ -620,21 +588,105 @@ window.retakePost = async function() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ██  5. CERTIFICATE  ██
+// ██  CERTIFICATE PREVIEW (HTML)  ██
+// ════════════════════════════════════════════════════════════════════════════
+function renderCertPreview() {
+  const container = document.getElementById('certPreviewContainer')
+  if (!container) return
+
+  const name     = normalizeName(state.user?.full_name ?? '') || '___________________________'
+  const empId    = state.user?.emp_id    || '-'
+  const dept     = state.user?.department || '-'
+  const dateStr  = formatThaiDate(new Date().toISOString())
+  const certNum  = state.certNumber || '-'
+
+  container.innerHTML = `
+    <div class="cert-preview-wrap">
+      <div class="cert-preview-label">ใบประกาศนียบัตร</div>
+
+      <div class="certificate">
+        <div class="cert-corner cert-corner-tl"></div>
+        <div class="cert-corner cert-corner-tr"></div>
+        <div class="cert-corner cert-corner-bl"></div>
+        <div class="cert-corner cert-corner-br"></div>
+        <div class="cert-watermark">XCMG</div>
+
+        <div class="cert-logo-row">
+          <div class="cert-logo-icon">🏗️</div>
+          <div>
+            <div class="cert-org-name">XCMG Thailand</div>
+            <div class="cert-org-sub">XCMG KNOWLEDGE ACADEMY</div>
+          </div>
+        </div>
+
+        <div class="cert-divider-gold"></div>
+
+        <div class="cert-headline">ประกาศนียบัตร</div>
+        <div class="cert-subheadline">CERTIFICATE OF COMPLETION</div>
+
+        <div class="cert-body">
+          <div class="cert-declare">
+            ขอมอบเกียรติบัตรฉบับนี้เพื่อรับรองว่า
+          </div>
+
+          <div class="cert-name-field">${name}</div>
+
+          <div class="cert-emp-info">
+            รหัสพนักงาน ${empId} &nbsp;|&nbsp; แผนก ${dept}
+          </div>
+
+          <div class="cert-course-box">
+            <div class="cert-course-label">หลักสูตร</div>
+            <div class="cert-course-name">
+              ความรู้ผลิตภัณฑ์ XCMG<br>
+              <span style="font-size:.85em;font-weight:600;opacity:.75">XCMG Product Knowledge E-Learning</span>
+            </div>
+          </div>
+
+          <div class="cert-reason">
+            ได้ผ่านการศึกษาและประเมินผลหลักสูตรดังกล่าวเป็นที่เรียบร้อยแล้ว ด้วยความวิริยะอุตสาหะ
+            และได้แสดงให้เห็นถึงความรู้ความเข้าใจในมาตรฐานผลิตภัณฑ์และการปฏิบัติงานของ XCMG
+            ตามเกณฑ์ที่กำหนดไว้อย่างครบถ้วน
+          </div>
+        </div>
+
+        <div class="cert-footer">
+          <div class="cert-date-block">
+            <div class="cert-date-label">วันที่ออกใบประกาศ</div>
+            <div class="cert-date-value">${dateStr}</div>
+          </div>
+          <div class="cert-seal">
+            <div class="cert-seal-icon">🏅</div>
+            <div class="cert-seal-text">CERTIFIED<br>XCMG</div>
+          </div>
+          <div class="cert-sig-block">
+            <div class="cert-sig-line"></div>
+            <div class="cert-sig-name">ผู้อำนวยการฝ่ายฝึกอบรม</div>
+            <div class="cert-sig-title">XCMG Thailand Co., Ltd.</div>
+          </div>
+        </div>
+
+        <div class="cert-number">เลขที่ใบประกาศ: ${certNum}</div>
+      </div>
+    </div>`
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ██  5. CERTIFICATE PDF  ██
 // ════════════════════════════════════════════════════════════════════════════
 async function issueCertificate(percent) {
   try {
     state.certNumber = `XCMG-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`
     const { error: certErr } = await supabase.from('certificates').insert({
-      user_id:    state.user.id,
+      user_id:     state.user.id,
       cert_number: state.certNumber,
-      post_score: percent,
-      email_sent: false,
-      issued_at:  new Date().toISOString(),
+      post_score:  percent,
+      email_sent:  false,
+      issued_at:   new Date().toISOString(),
     })
-    if (certErr) console.warn('cert insert skipped:', certErr.message)
+    if (certErr) console.warn('cert insert:', certErr.message)
   } catch (err) {
-    console.error('issueCertificate:', err)
+    console.error('issueCertificate error:', err)
   }
 }
 
@@ -644,194 +696,52 @@ window.handleDownloadCert = async function() {
 
   const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF
   if (!jsPDFLib) { alert('jsPDF ยังไม่โหลด กรุณารอสักครู่แล้วลองใหม่'); return }
+
+  showToast('⏳ กำลังจัดเตรียมใบประกาศนียบัตร...')
   await loadCertificateFonts()
 
-  const doc     = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-  const W = 297, H = 210
-  const name    = normalizeName(state.user.full_name ?? '-') || '-'
-  const empId   = state.user.emp_id || '-'
-  const dept    = state.user.department || '-'
-  const cert    = state.certNumber ?? 'N/A'
-  const score   = state.lastResult?.percent ?? '-'
-  const dateStr = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' })
+  try {
+    const doc = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    const canvasWidth = 297;
+    const centerX = canvasWidth / 2;
 
-  // Modern blue-gold background
-  doc.setFillColor(245, 248, 253); doc.rect(0, 0, W, H, 'F')
-  doc.setFillColor(14, 56, 114); doc.rect(0, 0, W, 30, 'F')
-  doc.setFillColor(255, 255, 255); doc.roundedRect(18, 28, W - 36, H - 52, 14, 14, 'F')
+    const name    = normalizeName(state.user.full_name ?? '-') || '-'
+    const empId   = state.user.emp_id || '-'
+    const dept    = state.user.department || '-'
+    const dateStr = formatThaiDate(new Date().toISOString())
 
-  // Gold accent shapes
-  doc.setFillColor(196, 157, 69); doc.rect(20, 34, 8, 60, 'F')
-  doc.setFillColor(245, 232, 156); doc.roundedRect(W - 62, 36, 36, 8, 3, 3, 'F')
-  doc.setDrawColor(196, 157, 69); doc.setLineWidth(1.5); doc.roundedRect(18, 28, W - 36, H - 52, 14, 14)
+    const imgData = await fetchImageAsBase64(CERT_TEMPLATE_URL);
+    doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
 
-  // Header text
-  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(255,255,255)
-  doc.text('XCMG KNOWLEDGE ACADEMY', W/2, 16, { align:'center' })
+    const nameImage = renderTextImage(name, {
+      width: 1600, height: 200,
+      initialFontSize: 64, color: XCMG_BLUE, fontWeight: 'bold'
+    });
+    doc.addImage(nameImage, 'PNG', centerX - 120, 108, 240, 30);
 
-  const watermarkImage = renderTextImage('XCMG', {
-    width: 1800,
-    height: 260,
-    fontWeight: 'bold',
-    color: 'rgba(196,157,69,0.12)',
-    alpha: 0.12,
-    initialFontSize: 220,
-    minFontSize: 120,
-    maxLineWidth: 1700,
-    lineHeightFactor: 1,
-  })
-  doc.addImage(watermarkImage, 'PNG', W/2 - 130, 72, 260, 90)
+    const empInfo = `รหัสพนักงาน ${empId}  |  แผนก ${dept}`;
+    const infoImage = renderTextImage(empInfo, {
+      width: 1600, height: 120,
+      initialFontSize: 28, color: TEXT_DARK, fontWeight: 'normal'
+    });
+    doc.addImage(infoImage, 'PNG', centerX - 100, 133, 200, 15);
 
-  // Main title
-  const titleImage = renderTextImage('ประกาศนียบัตร', {
-    width: 1200,
-    height: 120,
-    fontWeight: 'bold',
-    color: '#0f3d6e',
-    initialFontSize: 82,
-    minFontSize: 44,
-  })
-  doc.addImage(titleImage, 'PNG', W/2 - 135, 52, 270, 36)
-  doc.setDrawColor(196, 157, 69); doc.setLineWidth(2)
-  doc.line(W/2 - 75, 94, W/2 + 75, 94)
+    const fullDateText = `ให้ไว้ ณ วันที่ ${dateStr}`;
+    const dateImage = renderTextImage(fullDateText, {
+      width: 1600, height: 120,
+      initialFontSize: 30, color: TEXT_DARK, fontWeight: 'normal'
+    });
+    doc.addImage(dateImage, 'PNG', centerX - 90, 152, 180, 13);
 
-  // Subtitle and name
-  const introImage = renderTextImage('มอบให้กับ', {
-    width: 1200,
-    height: 90,
-    fontWeight: 'normal',
-    color: '#4d5f7f',
-    initialFontSize: 22,
-    minFontSize: 16,
-  })
-  doc.addImage(introImage, 'PNG', W/2 - 70, 102, 140, 12)
+    const sigData = await fetchImageAsBase64(SIGNATURE_URL);
+    doc.addImage(sigData, 'PNG', 205, 158, 45, 18);
 
-  const nameImage = renderTextImage(name, {
-    width: 1400,
-    height: 140,
-    fontWeight: 'bold',
-    color: '#102d57',
-    initialFontSize: 62,
-    minFontSize: 32,
-  })
-  doc.addImage(nameImage, 'PNG', W/2 - 145, 114, 290, 40)
-
-  const detailImage = renderTextImage(`รหัสพนักงาน ${empId}   |   แผนก ${dept}`, {
-    width: 1400,
-    height: 90,
-    fontWeight: 'normal',
-    color: '#5c708d',
-    initialFontSize: 18,
-    minFontSize: 12,
-  })
-  doc.addImage(detailImage, 'PNG', W/2 - 145, 156, 290, 12)
-
-  // Achievement statement
-  const statement1 = renderTextImage('ด้วยการผ่านหลักสูตรความรู้ผลิตภัณฑ์ XCMG', {
-    width: 1400,
-    height: 90,
-    fontWeight: 'normal',
-    color: '#3c4f6e',
-    initialFontSize: 20,
-    minFontSize: 14,
-    maxLineWidth: 1320,
-  })
-  doc.addImage(statement1, 'PNG', W/2 - 145, 170, 290, 14)
-
-  const statement2 = renderTextImage('และทำแบบทดสอบตามเกณฑ์ที่กำหนด', {
-    width: 1400,
-    height: 80,
-    fontWeight: 'normal',
-    color: '#3c4f6e',
-    initialFontSize: 20,
-    minFontSize: 14,
-    maxLineWidth: 1320,
-  })
-  doc.addImage(statement2, 'PNG', W/2 - 145, 184, 290, 14)
-
-  const scoreImage = renderTextImage(`คะแนนร้อยละ ${score} จากการประเมิน`, {
-    width: 1400,
-    height: 80,
-    fontWeight: 'bold',
-    color: '#0d2d52',
-    initialFontSize: 24,
-    minFontSize: 16,
-  })
-  doc.addImage(scoreImage, 'PNG', W/2 - 125, 198, 250, 16)
-
-  const dateImage = renderTextImage(`ออกให้ ณ วันที่ ${dateStr}`, {
-    width: 1400,
-    height: 80,
-    fontWeight: 'normal',
-    color: '#0d2d52',
-    initialFontSize: 18,
-    minFontSize: 12,
-  })
-  doc.addImage(dateImage, 'PNG', W/2 - 75, 212, 150, 12)
-
-  // Signature area
-  doc.setDrawColor(19, 74, 142)
-  doc.setLineWidth(0.4)
-  doc.line(W - 118, 170, W - 38, 170)
-  const signTitle = renderTextImage('ผู้มีอำนาจลงนาม', {
-    width: 1000,
-    height: 70,
-    fontWeight: 'normal',
-    color: '#4e6078',
-    initialFontSize: 12,
-    minFontSize: 10,
-  })
-  doc.addImage(signTitle, 'PNG', W - 110, 173, 72, 8)
-  const signName = renderTextImage('XCMG ประเทศไทย', {
-    width: 1000,
-    height: 70,
-    fontWeight: 'bold',
-    color: '#102d57',
-    initialFontSize: 14,
-    minFontSize: 10,
-  })
-  doc.addImage(signName, 'PNG', W - 110, 181, 72, 9)
-
-  // Footer band
-  doc.setFillColor(19, 74, 142); doc.rect(0, H - 16, W, 16, 'F')
-  const footerInfoText = renderTextImage('www.xcmg.com  |  บริษัท XCMG (ประเทศไทย) จำกัด', {
-    width: 1600,
-    height: 80,
-    fontWeight: 'normal',
-    color: '#f5e0a7',
-    initialFontSize: 9,
-    minFontSize: 7,
-    maxLineWidth: 1460,
-    lineHeightFactor: 1,
-  })
-  doc.addImage(footerInfoText, 'PNG', W/2 - 80, H - 12.5, 160, 5)
-
-  const footerCertText = renderTextImage(`ใบประกาศเลขที่ ${cert}`, {
-    width: 900,
-    height: 70,
-    fontWeight: 'normal',
-    color: '#ffffff',
-    initialFontSize: 9,
-    minFontSize: 7,
-    maxLineWidth: 860,
-    lineHeightFactor: 1,
-  })
-  doc.addImage(footerCertText, 'PNG', 18, H - 12.5, 70, 5)
-
-  const footerDateText = renderTextImage(`ออกเมื่อ ${dateStr}`, {
-    width: 900,
-    height: 70,
-    fontWeight: 'normal',
-    color: '#ffffff',
-    initialFontSize: 9,
-    minFontSize: 7,
-    maxLineWidth: 860,
-    lineHeightFactor: 1,
-  })
-  doc.addImage(footerDateText, 'PNG', W - 88, H - 12.5, 70, 5)
-
-  doc.save(`XCMG-Certificate-${cert}.pdf`)
-  showToast('📥 ดาวน์โหลดใบประกาศนียบัตรสำเร็จ!')
+    doc.save(`XCMG-Certificate-${state.user.id}.pdf`);
+    showToast('📥 ดาวน์โหลดใบประกาศนียบัตรเสร็จสมบูรณ์!')
+  } catch (error) {
+    console.error('PDF Generation failed:', error);
+    alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + error.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -841,7 +751,6 @@ function showToast(msg) {
   let t = document.getElementById('toast')
   if (!t) {
     t = document.createElement('div'); t.id = 'toast'
-    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#185fa5;color:#fff;padding:12px 24px;border-radius:8px;font-size:0.95rem;box-shadow:0 4px 20px rgba(0,0,0,.25);z-index:999;transition:opacity .4s'
     document.body.appendChild(t)
   }
   t.textContent = msg; t.style.opacity = '1'
@@ -850,7 +759,7 @@ function showToast(msg) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ██  RESTORE SESSION (Refresh)  ██
+// ██  RESTORE SESSION  ██
 // ════════════════════════════════════════════════════════════════════════════
 async function restoreSession() {
   try {
@@ -861,14 +770,13 @@ async function restoreSession() {
       .from('users').select('full_name,emp_id,department').eq('id', user.id).maybeSingle()
 
     const profileName = profile?.full_name ?? user.user_metadata?.full_name ?? ''
-  state.user = {
+    state.user = {
       id: user.id, email: user.email,
       full_name: normalizeName(profileName),
       emp_id: profile?.emp_id ?? '',
       department: profile?.department ?? '',
     }
 
-    // ผ่านแล้ว?
     const { data: cert } = await supabase
       .from('certificates').select('cert_number,post_score')
       .eq('user_id', user.id).order('issued_at', { ascending: false }).limit(1).maybeSingle()
@@ -879,7 +787,6 @@ async function restoreSession() {
       window.showScreen('screen-4'); return
     }
 
-    // ดูวิดีโอครบ?
     const { data: vp } = await supabase
       .from('video_progress').select('episode,completed').eq('user_id', user.id)
     ;(vp ?? []).filter(v => v.completed).forEach(v => state.episodesDone.add(Number(v.episode)))
@@ -888,7 +795,6 @@ async function restoreSession() {
       window.showScreen('screen-3'); return
     }
 
-    // ทำ pre-test แล้ว?
     const { data: pre } = await supabase
       .from('quiz_attempts').select('id').eq('user_id', user.id)
       .eq('quiz_type','pre').limit(1).maybeSingle()
@@ -898,7 +804,7 @@ async function restoreSession() {
     }
 
   } catch (err) {
-    console.warn('restoreSession error (non-critical):', err.message)
+    console.warn('restoreSession:', err.message)
   }
 }
 

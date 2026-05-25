@@ -1,7 +1,5 @@
-// admin.js — ดึงข้อมูลสำหรับ Admin panel
 import { supabase } from './supabase.js'
 
-// ── ตรวจสอบ role ก่อนเข้าหน้า Admin ─────────────────────────────────────────
 export async function requireAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return window.location.href = '/login.html'
@@ -15,10 +13,6 @@ export async function requireAdmin() {
   if (data?.role !== 'admin') return window.location.href = '/'
   return user
 }
-
-// ── ภาพรวม dashboard ─────────────────────────────────────────────────────────
-//
-// return: { totalUsers, passedUsers, passRate, avgScore, certsIssued }
 
 export async function getDashboardStats() {
   const [
@@ -46,7 +40,6 @@ export async function getDashboardStats() {
   }
 }
 
-// ── รายชื่อผู้เรียนทั้งหมดพร้อมสถานะ ─────────────────────────────────────────
 export async function getAllUsers() {
   const { data } = await supabase
     .from('users')
@@ -83,7 +76,6 @@ export async function getAllUsers() {
   })
 }
 
-// ── Export รายงานเป็น CSV ─────────────────────────────────────────────────────
 export async function exportCSV() {
   const users = await getAllUsers()
 
@@ -104,7 +96,7 @@ export async function exportCSV() {
     u.certNumber ?? '-'
   ])
 
-  const csv = '\uFEFF' + [headers, ...rows]  // \uFEFF = BOM สำหรับ Excel ภาษาไทย
+  const csv = '\uFEFF' + [headers, ...rows] 
     .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     .join('\n')
 
@@ -117,12 +109,11 @@ export async function exportCSV() {
   URL.revokeObjectURL(url)
 }
 
-// ── จัดการคำถาม (CRUD) ───────────────────────────────────────────────────────
 export async function addQuestion({ quizType, questionText, options, correctIndex, orderNum }) {
   const { error } = await supabase.from('questions').insert({
     quiz_type: quizType,
     question_text: questionText,
-    options,           // array เช่น ['ตัวเลือก A', 'B', 'C', 'D']
+    options,          
     correct_index: correctIndex,
     order_num: orderNum,
   })
