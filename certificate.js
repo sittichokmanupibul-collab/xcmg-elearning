@@ -31,14 +31,50 @@ async function loadCertFonts() {
   }
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload  = () => resolve(img);
-    img.onerror = () => reject(new Error(`โหลดภาพไม่สำเร็จ: ${src.slice(0, 60)}`));
-    img.src = src;
-  });
+// loadImage — รองรับทั้ง base64 data URL และ URL ภายนอก (Supabase Storage)
+// กรณี URL ภายนอก: fetch เป็น blob ก่อนเพื่อหลีกเลี่ยงปัญหา CORS canvas taint
+async function loadImage(src) {
+  // data URL (base64) — โหลดตรงได้เลย ไม่มีปัญหา CORS
+  if (src.startsWith('data:')) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload  = () => resolve(img);
+      img.onerror = () => reject(new Error('โหลด base64 image ไม่สำเร็จ'));
+      img.src = src;
+    });
+  }
+
+  // URL ภายนอก — fetch เป็น blob ก่อน แล้วสร้าง object URL
+  // วิธีนี้หลีกเลี่ยง canvas taint และ CORS error ได้ในกรณีที่ server อนุญาต
+  try {
+    const resp = await fetch(src);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const blob    = await resp.blob();
+    const objUrl  = URL.createObjectURL(blob);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        reject(new Error(`โหลดภาพไม่สำเร็จ: ${src.slice(0, 80)}`));
+      };
+      img.src = objUrl;
+    });
+  } catch (fetchErr) {
+    // fetch ไม่สำเร็จ (เช่น CORS block fetch ด้วย) → fallback crossOrigin img tag
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => resolve(img);
+      img.onerror = () => reject(new Error(
+        `โหลดภาพแม่แบบไม่สำเร็จ กรุณาตรวจสอบ CORS ใน Supabase Storage: ${src.slice(0, 80)}`
+      ));
+      img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+    });
+  }
 }
 
 function renderTextToDataUrl(text, options = {}) {
@@ -73,10 +109,38 @@ function renderTextToDataUrl(text, options = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// แปลง Supabase Storage public URL → signed URL (60 วินาที)
+// แก้ปัญหา CORS ที่ทำให้ canvas ถูก taint และ toDataURL() ล้มเหลว
+// ─────────────────────────────────────────────────────────────────
+async function toSignedUrl(publicUrl) {
+  if (!publicUrl) return null;
+  try {
+    const url   = new URL(publicUrl);
+    const parts = url.pathname.split('/');
+    // Supabase public URL: /storage/v1/object/public/<bucket>/<path>
+    const bucketIdx = parts.indexOf('public');
+    if (bucketIdx === -1) return publicUrl;
+    const bucket   = parts[bucketIdx + 1];
+    const filePath = parts.slice(bucketIdx + 2).join('/');
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(filePath, 60);
+    if (error || !data?.signedUrl) return publicUrl;
+    return data.signedUrl;
+  } catch {
+    return publicUrl;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Build the full certificate as an HTML Canvas (A4 landscape @2×)
 // ─────────────────────────────────────────────────────────────────
 async function buildCertCanvas({ fullName, empInfo, certDate, templateUrl, signatureUrl }) {
   await loadCertFonts();
+
+  // แปลงเป็น signed URL เพื่อหลีกเลี่ยง CORS (canvas taint)
+  const resolvedTemplateUrl  = await toSignedUrl(templateUrl);
+  const resolvedSignatureUrl = await toSignedUrl(signatureUrl);
 
   const W  = 2970;   // 297 mm × 10
   const H  = 2100;   // 210 mm × 10
@@ -88,8 +152,8 @@ async function buildCertCanvas({ fullName, empInfo, certDate, templateUrl, signa
   const ctx = canvas.getContext('2d');
 
   // 1. Background template
-  if (templateUrl) {
-    const tpl = await loadImage(templateUrl);
+  if (resolvedTemplateUrl) {
+    const tpl = await loadImage(resolvedTemplateUrl);
     ctx.drawImage(tpl, 0, 0, W, H);
   } else {
     ctx.fillStyle = '#ffffff';
@@ -142,8 +206,8 @@ async function buildCertCanvas({ fullName, empInfo, certDate, templateUrl, signa
   ctx.drawImage(dateImg, cx - 1350, 1530, 2700, 195);
 
   // 7. Signature
-  if (signatureUrl) {
-    const sig = await loadImage(signatureUrl);
+  if (resolvedSignatureUrl) {
+    const sig = await loadImage(resolvedSignatureUrl);
     ctx.drawImage(sig, 2050, 1590, 675, 270);
   }
 
