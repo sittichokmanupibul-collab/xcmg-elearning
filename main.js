@@ -28,16 +28,16 @@ function extractYouTubeId(input) {
 
 const EPISODE_VIDEO_IDS = {
   1: 'VJkImB3ZC2Y',
-  2: 'VJkImB3ZC2Y',
-  3: 'VJkImB3ZC2Y',
-  4: 'VJkImB3ZC2Y'
+  2: 'j5IDhI66MCI',
+  3: 'p1-OePHvTpo',
+  4: 'jmGOWdVb1TE'
 };
 
 const EPISODE_TITLES = {
   1: '100 XCMG Autonomous Electric Mining Trucks',
-  2: 'ตอนที่ 2',
-  3: 'ตอนที่ 3',
-  4: 'ตอนที่ 4'
+  2: 'XCMG XCA4000 All-Terrain Crane',
+  3: 'XCMG XE3000 Hydraulic Excavator',
+  4: 'XCMG XE215G พลังที่เหนือชั้น'
 };
 
 const PRE_QUESTIONS = [
