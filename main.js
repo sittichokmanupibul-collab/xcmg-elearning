@@ -731,84 +731,325 @@ window.handleDownloadCert = async function() {
   showToast('⏳ กำลังจัดเตรียมใบประกาศนียบัตร...');
 
   try {
-    // ── 1. build canvas ─────────────────────────────────────────────────────
     await loadCertificateFonts();
 
-    const W = 2970, H = 2100, cx = W / 2;
-    const certCanvas = document.createElement('canvas');
-    certCanvas.width = W; certCanvas.height = H;
-    const ctx = certCanvas.getContext('2d');
+    // ── Canvas size: A4 landscape @3× for crisp output ─────────────────────
+    const SCALE = 3;
+    const PW = 297, PH = 210; // mm
+    // We work in "pt" at 2.8346 pt/mm → A4 = 841.9 × 595.3 but let's keep px
+    // Work at 1200 × 849 px (≈ A4 landscape at 102 dpi) × SCALE
+    const W = 1200 * SCALE, H = 849 * SCALE;
+    const s = SCALE; // scale factor shorthand
 
-    const name    = normalizeName(state.user.full_name ?? '-') || '-';
-    const empId   = state.user.emp_id    || '-';
-    const dept    = state.user.department || '-';
+    const cvs = document.createElement('canvas');
+    cvs.width = W; cvs.height = H;
+    const ctx = cvs.getContext('2d');
+
+    const name   = normalizeName(state.user.full_name ?? '-') || '-';
+    const empId  = state.user.emp_id    || '-';
+    const dept   = state.user.department || '-';
     const dateStr = formatThaiDate(new Date().toISOString());
+    const certNum = state.certNumber || '-';
 
-    // พื้นหลัง template หรือสร้างเอง
-    try {
-      const tpl = await loadImageSafe(CERT_TEMPLATE_URL);
-      ctx.drawImage(tpl, 0, 0, W, H);
-    } catch {
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, '#f8f4e8'); grad.addColorStop(1, '#fdf9f0');
-      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#C9A84C';
-      ctx.lineWidth = 18; ctx.strokeRect(50, 50, W-100, H-100);
-      ctx.lineWidth = 6;  ctx.strokeRect(80, 80, W-160, H-160);
+    // ── Helper: fill centred text with auto font-size ───────────────────────
+    function drawCentredText(text, y, { font, size, color, maxW, weight = 'normal', italic = false } = {}) {
+      let fs = size * s;
+      const style = `${italic ? 'italic ' : ''}${weight} ${fs}px ${font || 'Sarabun,sans-serif'}`;
+      ctx.font = style;
+      ctx.fillStyle = color || '#111827';
+      // shrink if too wide
+      while (maxW && ctx.measureText(text).width > maxW * s && fs > 10) {
+        fs -= 1;
+        ctx.font = `${italic ? 'italic ' : ''}${weight} ${fs}px ${font || 'Sarabun,sans-serif'}`;
+      }
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, W / 2, y * s);
     }
 
-    // ลายน้ำ XCMG logo 45%
+    function drawLeftText(text, x, y, { font, size, color, weight = 'normal' } = {}) {
+      ctx.font = `${weight} ${size * s}px ${font || 'Sarabun,sans-serif'}`;
+      ctx.fillStyle = color || '#111827';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x * s, y * s);
+    }
+
+    function drawRightText(text, x, y, { font, size, color, weight = 'normal' } = {}) {
+      ctx.font = `${weight} ${size * s}px ${font || 'Sarabun,sans-serif'}`;
+      ctx.fillStyle = color || '#111827';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x * s, y * s);
+    }
+
+    // ── 1. White background ─────────────────────────────────────────────────
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. Outer gold border ────────────────────────────────────────────────
+    ctx.strokeStyle = 'rgba(196,146,42,0.5)';
+    ctx.lineWidth = 3 * s;
+    roundRect(ctx, 24 * s, 24 * s, (1200 - 48) * s, (849 - 48) * s, 12 * s);
+    ctx.stroke();
+
+    // inner thin border
+    ctx.strokeStyle = 'rgba(196,146,42,0.2)';
+    ctx.lineWidth = 1 * s;
+    roundRect(ctx, 34 * s, 34 * s, (1200 - 68) * s, (849 - 68) * s, 8 * s);
+    ctx.stroke();
+
+    // ── 3. Gold corner decorations ──────────────────────────────────────────
+    const cSize = 60 * s, cOff = 12 * s, cLine = 3 * s;
+    ctx.strokeStyle = 'rgba(196,146,42,0.4)';
+    ctx.lineWidth = cLine;
+    // TL
+    ctx.beginPath(); ctx.moveTo(cOff + cSize, cOff); ctx.lineTo(cOff, cOff); ctx.lineTo(cOff, cOff + cSize); ctx.stroke();
+    // TR
+    ctx.beginPath(); ctx.moveTo(W - cOff - cSize, cOff); ctx.lineTo(W - cOff, cOff); ctx.lineTo(W - cOff, cOff + cSize); ctx.stroke();
+    // BL
+    ctx.beginPath(); ctx.moveTo(cOff + cSize, H - cOff); ctx.lineTo(cOff, H - cOff); ctx.lineTo(cOff, H - cOff - cSize); ctx.stroke();
+    // BR
+    ctx.beginPath(); ctx.moveTo(W - cOff - cSize, H - cOff); ctx.lineTo(W - cOff, H - cOff); ctx.lineTo(W - cOff, H - cOff - cSize); ctx.stroke();
+
+    // ── 4. "XCMG" watermark text ────────────────────────────────────────────
+    ctx.save();
+    ctx.font = `800 ${200 * s}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle = 'rgba(26,74,138,0.025)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('XCMG', W / 2, H / 2);
+    ctx.restore();
+
+    // ── 5. Logo icon box ────────────────────────────────────────────────────
+    const iconSize = 56 * s;
+    const iconX = (W / 2) - iconSize - (12 * s);  // logo left of text row
+    const iconY = 72 * s;
+
+    // Draw rounded-rect background for logo
+    ctx.save();
+    const logoGrad = ctx.createLinearGradient(iconX, iconY, iconX + iconSize, iconY + iconSize);
+    logoGrad.addColorStop(0, '#0B2545');
+    logoGrad.addColorStop(1, '#1A4A8A');
+    ctx.fillStyle = logoGrad;
+    roundRect(ctx, iconX, iconY, iconSize, iconSize, 12 * s);
+    ctx.fill();
+
+    // Shadow under logo box
+    ctx.shadowColor = 'rgba(11,37,69,0.2)';
+    ctx.shadowBlur = 12 * s;
+    ctx.shadowOffsetY = 4 * s;
+    roundRect(ctx, iconX, iconY, iconSize, iconSize, 12 * s);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.restore();
+
+    // Draw logo image inside the box
     try {
-      const wm = await loadImageSafe(XCMG_LOGO_B64);
-      const wmW = W * 0.50, wmH = wmW * (wm.naturalHeight / wm.naturalWidth);
-      ctx.save(); ctx.globalAlpha = 0.45;
-      ctx.drawImage(wm, (W-wmW)/2, (H-wmH)/2, wmW, wmH);
-      ctx.restore();
+      const logoImg = await loadImageSafe(XCMG_LOGO_B64);
+      const pad = 6 * s;
+      ctx.drawImage(logoImg, iconX + pad, iconY + pad, iconSize - pad * 2, iconSize - pad * 2);
     } catch {}
 
-    // โลโก้บนสุด (แทนโลโก้เดิม)
-    try {
-      const logo = await loadImageSafe(XCMG_LOGO_B64);
-      const lW = 420, lH = lW * (logo.naturalHeight / logo.naturalWidth);
-      ctx.drawImage(logo, cx - lW/2, 60, lW, lH);
-    } catch {}
+    // Org name text next to logo
+    const textX = (W / 2) + (4 * s);
+    ctx.font = `700 ${22 * s}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('XCMG Thailand', textX, (72 + 8) * s);
 
-    // ชื่อผู้รับ
-    const nameImg = await loadImageSafe(renderTextImage(name, {
-      width: 2400, height: 300, initialFontSize: 96, color: XCMG_BLUE, fontWeight: 'bold'
-    }));
-    ctx.drawImage(nameImg, cx - 1800, 1070, 3600, 420);
+    ctx.font = `normal ${11 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563';
+    ctx.textBaseline = 'top';
+    ctx.fillText('XCMG KNOWLEDGE ACADEMY', textX, (72 + 34) * s);
 
-    // ข้อมูลพนักงาน
-    const empInfoTxt = 'รหัสพนักงาน ' + empId + '  |  แผนก ' + dept;
-    const infoImg = await loadImageSafe(renderTextImage(empInfoTxt, {
-      width: 2400, height: 180, initialFontSize: 42, color: TEXT_DARK, fontWeight: 'normal'
-    }));
-    ctx.drawImage(infoImg, cx - 1500, 1330, 3000, 210);
+    // ── 6. Gold divider line ────────────────────────────────────────────────
+    const divY = 148 * s;
+    const divGrad = ctx.createLinearGradient(0, 0, W, 0);
+    divGrad.addColorStop(0, 'transparent');
+    divGrad.addColorStop(0.5, '#C4922A');
+    divGrad.addColorStop(1, 'transparent');
+    ctx.strokeStyle = divGrad;
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.moveTo(80 * s, divY);
+    ctx.lineTo((1200 - 80) * s, divY);
+    ctx.stroke();
 
-    // วันที่
-    const dateImg = await loadImageSafe(renderTextImage('ให้ไว้ ณ วันที่ ' + dateStr, {
-      width: 2400, height: 180, initialFontSize: 44, color: TEXT_DARK, fontWeight: 'normal'
-    }));
-    ctx.drawImage(dateImg, cx - 1350, 1520, 2700, 195);
+    // ── 7. "ประกาศนียบัตร" headline ─────────────────────────────────────────
+    drawCentredText('ประกาศนียบัตร', 182, {
+      font: "'Noto Serif Thai',serif", size: 38, color: '#0B2545', weight: '700', maxW: 900
+    });
 
-    // ลายเซ็น
+    // ── 8. "CERTIFICATE OF COMPLETION" ──────────────────────────────────────
+    drawCentredText('CERTIFICATE OF COMPLETION', 222, {
+      font: 'Sarabun,sans-serif', size: 13, color: '#4B5563', weight: 'normal', maxW: 900
+    });
+
+    // ── 9. "ขอมอบเกียรติบัตร..." ────────────────────────────────────────────
+    drawCentredText('ขอมอบเกียรติบัตรฉบับนี้เพื่อรับรองว่า', 264, {
+      font: 'Sarabun,sans-serif', size: 15, color: '#4B5563', weight: 'normal', maxW: 900
+    });
+
+    // ── 10. Recipient name ──────────────────────────────────────────────────
+    drawCentredText(name, 315, {
+      font: "'Noto Serif Thai',serif", size: 44, color: '#0B2545', weight: '700', maxW: 1000
+    });
+
+    // ── 11. Employee info ───────────────────────────────────────────────────
+    drawCentredText('รหัสพนักงาน ' + empId + '  |  แผนก ' + dept, 362, {
+      font: 'Sarabun,sans-serif', size: 14, color: '#4B5563', weight: 'normal', maxW: 900
+    });
+
+    // ── 12. Course box ──────────────────────────────────────────────────────
+    const boxX = 280 * s, boxY = 385 * s, boxW = 640 * s, boxH = 88 * s;
+    // Background gradient
+    const boxGrad = ctx.createLinearGradient(boxX, boxY, boxX + boxW, boxY + boxH);
+    boxGrad.addColorStop(0, '#EBF2FC');
+    boxGrad.addColorStop(1, '#DDE8FA');
+    ctx.fillStyle = boxGrad;
+    roundRect(ctx, boxX, boxY, boxW, boxH, 10 * s);
+    ctx.fill();
+    // Border
+    ctx.strokeStyle = 'rgba(37,99,176,0.2)';
+    ctx.lineWidth = 1 * s;
+    roundRect(ctx, boxX, boxY, boxW, boxH, 10 * s);
+    ctx.stroke();
+
+    // "หลักสูตร" label
+    ctx.font = `700 ${11 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#2563B0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('หลักสูตร', W / 2, (385 + 18) * s);
+
+    // course name Thai
+    ctx.font = `700 ${17 * s}px 'Barlow Condensed','Sarabun',sans-serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.fillText('ความรู้ผลิตภัณฑ์ XCMG', W / 2, (385 + 42) * s);
+
+    // course name English
+    ctx.font = `600 ${13 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = 'rgba(11,37,69,0.6)';
+    ctx.fillText('XCMG Product Knowledge E-Learning', W / 2, (385 + 65) * s);
+
+    // ── 13. Reason text ─────────────────────────────────────────────────────
+    ctx.font = `normal ${13 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const line1 = 'ได้ผ่านการศึกษาและประเมินผลหลักสูตรดังกล่าวเป็นที่เรียบร้อยแล้ว ด้วยความวิริยะอุตสาหะ';
+    const line2 = 'และได้แสดงให้เห็นถึงความรู้ความเข้าใจในมาตรฐานผลิตภัณฑ์และการปฏิบัติงานของ XCMG ตามเกณฑ์ที่กำหนดไว้อย่างครบถ้วน';
+    ctx.fillText(line1, W / 2, 520 * s);
+    ctx.fillText(line2, W / 2, 540 * s);
+
+    // ── 14. Footer: Date | Seal | Signature ─────────────────────────────────
+    const footY = 620;
+
+    // Date (left)
+    ctx.font = `normal ${10 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('วันที่ออกใบประกาศ', 100 * s, footY * s);
+
+    ctx.font = `600 ${16 * s}px 'Noto Serif Thai',serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.fillText(dateStr, 100 * s, (footY + 26) * s);
+
+    // Seal (centre)
+    const sealCx = W / 2, sealCy = (footY + 10) * s, sealR = 42 * s;
+    // Outer ring
+    ctx.strokeStyle = 'rgba(196,146,42,0.4)';
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.arc(sealCx, sealCy, sealR, 0, Math.PI * 2); ctx.stroke();
+    // Glow ring
+    ctx.strokeStyle = 'rgba(196,146,42,0.1)';
+    ctx.lineWidth = 4 * s;
+    ctx.beginPath(); ctx.arc(sealCx, sealCy, sealR + 4 * s, 0, Math.PI * 2); ctx.stroke();
+    // Fill
+    const sealGrad = ctx.createRadialGradient(sealCx - sealR * 0.3, sealCy - sealR * 0.3, 0, sealCx, sealCy, sealR);
+    sealGrad.addColorStop(0, '#FFF8EC');
+    sealGrad.addColorStop(1, '#FDF0D0');
+    ctx.fillStyle = sealGrad;
+    ctx.beginPath(); ctx.arc(sealCx, sealCy, sealR, 0, Math.PI * 2); ctx.fill();
+    // 🏅 medal emoji
+    ctx.font = `${26 * s}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏅', sealCx, sealCy - 6 * s);
+    ctx.font = `700 ${8 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#C4922A';
+    ctx.fillText('CERTIFIED', sealCx, sealCy + 20 * s);
+    ctx.fillText('XCMG', sealCx, sealCy + 31 * s);
+
+    // Signature block (right)
+    const sigX = 1100 * s;
+    // signature line
+    ctx.strokeStyle = '#D1D9E6';
+    ctx.lineWidth = 1.5 * s;
+    ctx.beginPath();
+    ctx.moveTo(sigX - 120 * s, (footY - 8) * s);
+    ctx.lineTo(sigX, (footY - 8) * s);
+    ctx.stroke();
+
+    // Try to load real signature image
     try {
       const sig = await loadImageSafe(SIGNATURE_URL);
-      ctx.drawImage(sig, 2050, 1580, 650, 240);
+      ctx.drawImage(sig, sigX - 130 * s, (footY - 45) * s, 130 * s, 40 * s);
     } catch {}
 
-    // ── 2. ส่งออกไฟล์ ────────────────────────────────────────────────────────
+    ctx.font = `700 ${12 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ผู้อำนวยการฝ่ายฝึกอบรม', sigX, footY * s);
+
+    ctx.font = `normal ${11 * s}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563';
+    ctx.fillText('XCMG Thailand Co., Ltd.', sigX, (footY + 18) * s);
+
+    // ── 15. Dashed divider above cert number ────────────────────────────────
+    ctx.setLineDash([6 * s, 4 * s]);
+    ctx.strokeStyle = 'rgba(196,146,42,0.3)';
+    ctx.lineWidth = 1 * s;
+    ctx.beginPath();
+    ctx.moveTo(80 * s, 695 * s);
+    ctx.lineTo((1200 - 80) * s, 695 * s);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ── 16. Certificate number ──────────────────────────────────────────────
+    drawCentredText('เลขที่ใบประกาศ: ' + certNum, 717, {
+      font: 'Sarabun,sans-serif', size: 11, color: '#A0AEC0', weight: 'normal'
+    });
+
+    // ── Helper: roundRect polyfill ───────────────────────────────────────────
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // ── 17. Export ───────────────────────────────────────────────────────────
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isAnd = /android/i.test(navigator.userAgent);
     const isSaf = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
     const openAsImage = () => {
-      const dataUrl = certCanvas.toDataURL('image/png');
+      const dataUrl = cvs.toDataURL('image/png');
       const win = window.open('', '_blank');
       if (!win) {
-        // pop-up blocked → blob download
-        certCanvas.toBlob(blob => {
+        cvs.toBlob(blob => {
           const u = URL.createObjectURL(blob);
           const a = document.createElement('a'); a.href = u;
           a.download = 'XCMG-Certificate-' + state.user.id + '.png';
@@ -824,21 +1065,18 @@ window.handleDownloadCert = async function() {
     if (isIOS || isAnd) {
       openAsImage();
     } else {
-      // Desktop: PDF ก่อน, fallback PNG
       const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF;
       if (jsPDFLib) {
         try {
-          const imgData = certCanvas.toDataURL('image/jpeg', 0.92);
+          const imgData = cvs.toDataURL('image/jpeg', 0.95);
           const doc = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' });
           doc.addImage(imgData, 'JPEG', 0, 0, 297, 210);
           doc.save('XCMG-Certificate-' + state.user.id + '.pdf');
-        } catch {
-          openAsImage();
-        }
+        } catch { openAsImage(); }
       } else if (isSaf) {
         openAsImage();
       } else {
-        certCanvas.toBlob(blob => {
+        cvs.toBlob(blob => {
           const u = URL.createObjectURL(blob);
           const a = document.createElement('a'); a.href = u;
           a.download = 'XCMG-Certificate-' + state.user.id + '.png';
