@@ -6,7 +6,7 @@ import { supabase } from './supabase.js'
 
 const CERT_TEMPLATE_URL = '/assets/cert-template.png';
 const SIGNATURE_URL     = '/assets/signature.png';
-const XCMG_LOGO_B64 = 'data:image/jpeg;base64,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';
+const XCMG_LOGO_B64 = 'data:image/webp;base64,UklGRuwEAABXRUJQVlA4IOAEAAAQHQCdASo7ADgAPhUIg0EhBz6dqgQAUS2AFiSoL8A/ADrGHwcR/Fz9ZP850NerncT9qv87inH177O/dX/M/sA7QD9B/0u/kXsq9AD9bv6h/APfA/gHUAfqb///3/7gD9gPYA8or9dPgj/tn+A9In//3mp9A+lXp9fWP9gMuV9P4Qdpr7Vfxmy5LTJfzL+2/l5zAxzX9r/xP3Ieyb8g/tn+X/Lv6BP41/O/8j+af9g7+f66ewn+qR/v639ucMYnBcmxyhNOIP6kfY9jbQCdI47+2zNJQDPPibEgmwCvYbGvNO8zeiIb2KP3IHi9OCPEIcEAAP7/GlpiP12sSZtHaVf5O/zb0S3PAtHizWIB/vurR3Ybw+c61uBCH69ue1sfzlOADwjQWeZnY0fnB0jaXoKC+Emi+gcFXZXTJht/8JXl9+PSj8DgL9hMYJCy3ZN9DqMs0boZ8A3UA2HgZXY34cHjl9eX747DSq2EdicjI+UwqB9N81PoFYK9Kyi6b2xKi/wRO0Z4o8l712ZWent3u2945E5LOLQe96iJXtFIUe0L7NZg1tF+ih0OIb0yatz/AsDUjf6erv/+vf8txsC2Ou2Dn9IZj//TEQzPw2SZD2Iba7yHgqVJYv2yFNiR/Co0lJ1EMZlH/6ByVHBKVEBMSRhO+5ie6OFxJe7Pv3R4/N7ZHvq09o140v4+afcttQ1AtK/AtrOVsq55P52Rpg7wMoKE2INh2f5sbsZYgsOMypSIoyhO2fEtNuZpoqnibeMO5M31I7P0CEHxn2TpKRTJc5nrKxvhTB8pGNpzHUgup2D9CnmW/MTUbbYDO9HQUp/516nMVOL8nqwCNn9xOtyzLq1bN5r31n0ah/FaGU6Rg3iWauEQ6swfraW7GeLZTr5MUFRwKe/HdpnU14Yqrup2NxtINav13StnciMAgVDm0fWzDB8osrnWYeMoYW4gSawiLaVdU5tpNx3uis5X5fHk4HzNUGiIGguOkMHKeeFnmCZmYcq4iICH8RAnxnd3BBDNQxMyGAcBx9sc2IICgoju5LtxNUoa7+Lzn2aO/8QBydw6YG5YKF/uGNVTWG0dff4JRgoXbuOPNzSUFxTS1aBDattZcxlvd8jrFV4oEJWhj6EqT54sgv9snFKMrHv8f2U3GWSZx2P5eZsBq1DHUKBIooeOvS9cDDzC1wLizg+pX5PFzHfqcNaesPwbCNLKHsMTMeExpCzu/WhzJvfAdMfbpqzCBKEoxZOoxYclhjy0LpO6TNpg+LeOOgC8PJbrnUI8eIMqc107C+MdPUS4KdzSPyT42Izs2Aox8oio/7f/4m34ejpRxMjjRhzeBnS6/TAht5skDLi8ZUe7BCdv//epLCXaTwVnLoe5//8M69MTxAVdCbsUFkmQoo7vR1cP//5UI0fSwWCZ7h6cXvRYSds9RcvmwHY2dW/ntWjSotmobmk1bAOA5KJ/U+Mjpn8hD716JqgHu0DlCuTDpQqa/vIDiPaeSGkuWymu8Qs0BHUBtWw/v3v8D8c8MJU8Nbvw2sVCrzsaf39mjVf//1eIsTU6DdQEAW878/Lp/6pyv5jyavSVoKY0Vr//pLnSD7+v1uXyU+1ALUp7XLeLf2umtgcEJ2zFbAwiogvNiEbPu+58I0GXTH1Ro8JryocZqap3iZMAAAA=';
 
 
 const XCMG_BLUE = '#1B3A6B';
@@ -203,16 +203,10 @@ function normalizeName(name) {
 }
 
 function formatThaiDate(dateString) {
-  const months = [
-    'January', 'February', 'March', 'April',
-    'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December'
-  ];
+  const months = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
   const date = dateString ? new Date(dateString) : new Date();
-  const d = date.getDate();
-  const m = months[date.getMonth()];
-  const y = date.getFullYear();
-  return `${d} ${m} ${y}`;
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 function renderTextImage(text, options = {}) {
@@ -626,11 +620,11 @@ function renderCertPreview() {
   const container = document.getElementById('certPreviewContainer')
   if (!container) return
 
-  const name     = normalizeName(state.user?.full_name ?? '') || '___________________________'
-  const empId    = state.user?.emp_id    || '-'
-  const dept     = state.user?.department || '-'
-  const dateStr  = formatThaiDate(new Date().toISOString())
-  const certNum  = state.certNumber || '-'
+  const name    = normalizeName(state.user?.full_name ?? '') || '___________________________'
+  const empId   = state.user?.emp_id    || '-'
+  const dept    = state.user?.department || '-'
+  const dateStr = formatThaiDate(new Date().toISOString())
+  const certNum = state.certNumber || '-'
 
   container.innerHTML = `
     <div class="cert-preview-wrap">
@@ -644,7 +638,9 @@ function renderCertPreview() {
         <div class="cert-watermark">XCMG</div>
 
         <div class="cert-logo-row">
-          <div class="cert-logo-icon">🏗️</div>
+          <div class="cert-logo-icon">
+            <img src="logo-new.webp" alt="XCMG" style="width:48px;height:48px;object-fit:contain;border-radius:10px;display:block;">
+          </div>
           <div>
             <div class="cert-org-name">XCMG Thailand</div>
             <div class="cert-org-sub">XCMG KNOWLEDGE ACADEMY</div>
@@ -657,14 +653,12 @@ function renderCertPreview() {
         <div class="cert-subheadline">CERTIFICATE OF COMPLETION</div>
 
         <div class="cert-body">
-          <div class="cert-declare">
-            This is to certify that
-          </div>
+          <div class="cert-declare">This is to certify that</div>
 
-          <div class="cert-name-field">${name}</div>
+          <div class="cert-name-field">\${name}</div>
 
           <div class="cert-emp-info">
-            Employee ID: ${empId} &nbsp;|&nbsp; Department: ${dept}
+            Employee ID: \${empId} &nbsp;|&nbsp; Department: \${dept}
           </div>
 
           <div class="cert-course-box">
@@ -685,7 +679,7 @@ function renderCertPreview() {
         <div class="cert-footer">
           <div class="cert-date-block">
             <div class="cert-date-label">DATE OF ISSUE</div>
-            <div class="cert-date-value">${dateStr}</div>
+            <div class="cert-date-value">\${dateStr}</div>
           </div>
           <div class="cert-seal">
             <div class="cert-seal-icon">🏅</div>
@@ -698,7 +692,7 @@ function renderCertPreview() {
           </div>
         </div>
 
-        <div class="cert-number">Certificate No.: ${certNum}</div>
+        <div class="cert-number">Certificate No.: \${certNum}</div>
       </div>
     </div>`
 }
@@ -731,91 +725,213 @@ window.handleDownloadCert = async function() {
   showToast('⏳ Preparing certificate...');
 
   try {
-    // ── 1. build canvas ─────────────────────────────────────────────────────
     await loadCertificateFonts();
 
-    const W = 2970, H = 2100, cx = W / 2;
-    const certCanvas = document.createElement('canvas');
-    certCanvas.width = W; certCanvas.height = H;
-    const ctx = certCanvas.getContext('2d');
+    // Canvas: 1200×849 px @ 3× scale ≈ A4 landscape
+    const S = 3;
+    const W = 1200 * S, H = 849 * S;
+    const cvs = document.createElement('canvas');
+    cvs.width = W; cvs.height = H;
+    const ctx = cvs.getContext('2d');
 
     const name    = normalizeName(state.user.full_name ?? '-') || '-';
     const empId   = state.user.emp_id    || '-';
     const dept    = state.user.department || '-';
     const dateStr = formatThaiDate(new Date().toISOString());
+    const certNum = state.certNumber || '-';
 
-    // Background template or draw fallback
-    try {
-      const tpl = await loadImageSafe(CERT_TEMPLATE_URL);
-      ctx.drawImage(tpl, 0, 0, W, H);
-    } catch {
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, '#f8f4e8'); grad.addColorStop(1, '#fdf9f0');
-      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#C9A84C';
-      ctx.lineWidth = 18; ctx.strokeRect(50, 50, W-100, H-100);
-      ctx.lineWidth = 6;  ctx.strokeRect(80, 80, W-160, H-160);
+    // ── helpers ──────────────────────────────────────────────────────────────
+    function rr(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo((x+r)*S, y*S);
+      ctx.lineTo((x+w-r)*S, y*S);
+      ctx.quadraticCurveTo((x+w)*S, y*S, (x+w)*S, (y+r)*S);
+      ctx.lineTo((x+w)*S, (y+h-r)*S);
+      ctx.quadraticCurveTo((x+w)*S, (y+h)*S, (x+w-r)*S, (y+h)*S);
+      ctx.lineTo((x+r)*S, (y+h)*S);
+      ctx.quadraticCurveTo(x*S, (y+h)*S, x*S, (y+h-r)*S);
+      ctx.lineTo(x*S, (y+r)*S);
+      ctx.quadraticCurveTo(x*S, y*S, (x+r)*S, y*S);
+      ctx.closePath();
     }
 
-    // Watermark: XCMG logo 45% opacity
+    function tc(text, y, size, color, weight, font, maxPx) {
+      let fs = size * S;
+      const f = () => `${weight||'normal'} ${fs}px ${font||'Sarabun,sans-serif'}`;
+      ctx.font = f();
+      if (maxPx) { while (ctx.measureText(text).width > maxPx && fs > 10) { fs -= 1; ctx.font = f(); } }
+      ctx.fillStyle = color || '#111827';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, W/2, y*S);
+    }
+
+    // ── 1. White background ──────────────────────────────────────────────────
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. Outer gold border ─────────────────────────────────────────────────
+    ctx.strokeStyle = 'rgba(196,146,42,0.5)';
+    ctx.lineWidth = 3 * S;
+    rr(24, 24, 1152, 801, 12); ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(196,146,42,0.2)';
+    ctx.lineWidth = 1 * S;
+    rr(34, 34, 1132, 781, 8); ctx.stroke();
+
+    // ── 3. Corner decorations ────────────────────────────────────────────────
+    const co = 12, cs = 60, cl = 3;
+    ctx.strokeStyle = 'rgba(196,146,42,0.4)';
+    ctx.lineWidth = cl * S;
+    [[co,co,1,1],[1200-co,co,-1,1],[co,849-co,1,-1],[1200-co,849-co,-1,-1]].forEach(([x,y,dx,dy]) => {
+      ctx.beginPath();
+      ctx.moveTo((x+cs*dx)*S, y*S); ctx.lineTo(x*S, y*S); ctx.lineTo(x*S, (y+cs*dy)*S);
+      ctx.stroke();
+    });
+
+    // ── 4. Watermark ─────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.font = `800 ${200*S}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle = 'rgba(26,74,138,0.025)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('XCMG', W/2, H/2);
+    ctx.restore();
+
+    // ── 5. Logo box ──────────────────────────────────────────────────────────
+    const iconSz = 56, iconX = 1200/2 - iconSz - 12, iconY = 72;
+    ctx.save();
+    const lg = ctx.createLinearGradient(iconX*S, iconY*S, (iconX+iconSz)*S, (iconY+iconSz)*S);
+    lg.addColorStop(0, '#0B2545'); lg.addColorStop(1, '#1A4A8A');
+    ctx.fillStyle = lg;
+    ctx.shadowColor = 'rgba(11,37,69,0.2)'; ctx.shadowBlur = 12*S; ctx.shadowOffsetY = 4*S;
+    rr(iconX, iconY, iconSz, iconSz, 12); ctx.fill();
+    ctx.restore();
+
     try {
-      const wm = await loadImageSafe(XCMG_LOGO_B64);
-      const wmW = W * 0.50, wmH = wmW * (wm.naturalHeight / wm.naturalWidth);
-      ctx.save(); ctx.globalAlpha = 0.45;
-      ctx.drawImage(wm, (W-wmW)/2, (H-wmH)/2, wmW, wmH);
-      ctx.restore();
+      const logoImg = await loadImageSafe(XCMG_LOGO_B64);
+      const pad = 7;
+      ctx.drawImage(logoImg, (iconX+pad)*S, (iconY+pad)*S, (iconSz-pad*2)*S, (iconSz-pad*2)*S);
     } catch {}
 
-    // Top logo
-    try {
-      const logo = await loadImageSafe(XCMG_LOGO_B64);
-      const lW = 420, lH = lW * (logo.naturalHeight / logo.naturalWidth);
-      ctx.drawImage(logo, cx - lW/2, 60, lW, lH);
-    } catch {}
+    // Org text next to logo
+    const tx = (1200/2 + 4) * S;
+    ctx.font = `700 ${22*S}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle = '#0B2545'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('XCMG Thailand', tx, (iconY + 8) * S);
+    ctx.font = `normal ${11*S}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563';
+    ctx.fillText('XCMG KNOWLEDGE ACADEMY', tx, (iconY + 34) * S);
 
-    // Recipient name
-    const nameImg = await loadImageSafe(renderTextImage(name, {
-      width: 2400, height: 300, initialFontSize: 96, color: XCMG_BLUE, fontWeight: 'bold'
-    }));
-    ctx.drawImage(nameImg, cx - 1800, 1070, 3600, 420);
+    // ── 6. Gold divider ──────────────────────────────────────────────────────
+    const dg = ctx.createLinearGradient(0, 0, W, 0);
+    dg.addColorStop(0,'transparent'); dg.addColorStop(0.5,'#C4922A'); dg.addColorStop(1,'transparent');
+    ctx.strokeStyle = dg; ctx.lineWidth = 2*S;
+    ctx.beginPath(); ctx.moveTo(80*S, 148*S); ctx.lineTo(1120*S, 148*S); ctx.stroke();
 
-    // Employee info
-    const empInfoTxt = 'Employee ID: ' + empId + '  |  Department: ' + dept;
-    const infoImg = await loadImageSafe(renderTextImage(empInfoTxt, {
-      width: 2400, height: 180, initialFontSize: 42, color: TEXT_DARK, fontWeight: 'normal'
-    }));
-    ctx.drawImage(infoImg, cx - 1500, 1330, 3000, 210);
+    // ── 7. CERTIFICATE headline ──────────────────────────────────────────────
+    tc('CERTIFICATE', 186, 40, '#0B2545', '700', "'Barlow Condensed',sans-serif", 900*S);
+    tc('OF COMPLETION', 222, 14, '#4B5563', 'normal', 'Sarabun,sans-serif', 900*S);
 
-    // Date
-    const dateImg = await loadImageSafe(renderTextImage('Issued on ' + dateStr, {
-      width: 2400, height: 180, initialFontSize: 44, color: TEXT_DARK, fontWeight: 'normal'
-    }));
-    ctx.drawImage(dateImg, cx - 1350, 1520, 2700, 195);
+    // ── 8. Declare ───────────────────────────────────────────────────────────
+    tc('This is to certify that', 264, 15, '#4B5563', 'normal', 'Sarabun,sans-serif', 900*S);
 
-    // Signature
+    // ── 9. Recipient name ────────────────────────────────────────────────────
+    tc(name, 318, 46, '#0B2545', '700', "Georgia,'Times New Roman',serif", 1000*S);
+
+    // ── 10. Employee info ────────────────────────────────────────────────────
+    tc('Employee ID: ' + empId + '   |   Department: ' + dept, 363, 14, '#4B5563', 'normal', 'Sarabun,sans-serif', 900*S);
+
+    // ── 11. Course box ───────────────────────────────────────────────────────
+    const bx=280, by=385, bw=640, bh=88;
+    const bg = ctx.createLinearGradient(bx*S, by*S, (bx+bw)*S, (by+bh)*S);
+    bg.addColorStop(0,'#EBF2FC'); bg.addColorStop(1,'#DDE8FA');
+    ctx.fillStyle = bg; rr(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle = 'rgba(37,99,176,0.2)'; ctx.lineWidth = 1*S;
+    rr(bx,by,bw,bh,10); ctx.stroke();
+
+    ctx.font = `700 ${11*S}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#2563B0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('COURSE', W/2, (by+18)*S);
+    ctx.font = `700 ${17*S}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.fillText('XCMG Product Knowledge', W/2, (by+44)*S);
+    ctx.font = `600 ${13*S}px Sarabun,sans-serif`;
+    ctx.fillStyle = 'rgba(11,37,69,0.6)';
+    ctx.fillText('XCMG Product Knowledge E-Learning', W/2, (by+68)*S);
+
+    // ── 12. Reason text ──────────────────────────────────────────────────────
+    ctx.font = `normal ${13*S}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('has successfully completed the above course with diligence and dedication,', W/2, 508*S);
+    ctx.fillText('demonstrating a comprehensive understanding of XCMG product standards', W/2, 527*S);
+    ctx.fillText('and operational practices as required.', W/2, 546*S);
+
+    // ── 13. Footer ───────────────────────────────────────────────────────────
+    const fy = 624;
+
+    // Date — left
+    ctx.font = `normal ${10*S}px Sarabun,sans-serif`;
+    ctx.fillStyle = '#4B5563'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('DATE OF ISSUE', 100*S, (fy-10)*S);
+    ctx.font = `600 ${15*S}px Georgia,serif`;
+    ctx.fillStyle = '#0B2545';
+    ctx.fillText(dateStr, 100*S, (fy+14)*S);
+
+    // Seal — centre
+    const scx=W/2, scy=(fy+8)*S, sr=42*S;
+    ctx.strokeStyle='rgba(196,146,42,0.4)'; ctx.lineWidth=2*S;
+    ctx.beginPath(); ctx.arc(scx,scy,sr,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(196,146,42,0.1)'; ctx.lineWidth=4*S;
+    ctx.beginPath(); ctx.arc(scx,scy,sr+4*S,0,Math.PI*2); ctx.stroke();
+    const sg=ctx.createRadialGradient(scx-sr*.3,scy-sr*.3,0,scx,scy,sr);
+    sg.addColorStop(0,'#FFF8EC'); sg.addColorStop(1,'#FDF0D0');
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(scx,scy,sr,0,Math.PI*2); ctx.fill();
+    ctx.font=`${26*S}px serif`; ctx.fillStyle='#C4922A';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏅', scx, scy-6*S);
+    ctx.font=`700 ${8*S}px Sarabun,sans-serif`;
+    ctx.fillText('CERTIFIED', scx, scy+20*S);
+    ctx.fillText('XCMG', scx, scy+31*S);
+
+    // Signature — right
+    const sx=1100;
     try {
       const sig = await loadImageSafe(SIGNATURE_URL);
-      ctx.drawImage(sig, 2050, 1580, 650, 240);
+      ctx.drawImage(sig, (sx-130)*S, (fy-44)*S, 130*S, 38*S);
     } catch {}
+    ctx.strokeStyle='#D1D9E6'; ctx.lineWidth=1.5*S;
+    ctx.beginPath(); ctx.moveTo((sx-130)*S,(fy-6)*S); ctx.lineTo(sx*S,(fy-6)*S); ctx.stroke();
+    ctx.font=`700 ${12*S}px Sarabun,sans-serif`;
+    ctx.fillStyle='#0B2545'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('Training Director', sx*S, fy*S);
+    ctx.font=`normal ${11*S}px Sarabun,sans-serif`;
+    ctx.fillStyle='#4B5563';
+    ctx.fillText('XCMG Thailand Co., Ltd.', sx*S, (fy+18)*S);
 
-    // ── 2. Export file ────────────────────────────────────────────────────────
+    // ── 14. Dashed line + cert number ─────────────────────────────────────────
+    ctx.setLineDash([6*S,4*S]);
+    ctx.strokeStyle='rgba(196,146,42,0.3)'; ctx.lineWidth=1*S;
+    ctx.beginPath(); ctx.moveTo(80*S,697*S); ctx.lineTo(1120*S,697*S); ctx.stroke();
+    ctx.setLineDash([]);
+
+    tc('Certificate No.: ' + certNum, 718, 11, '#A0AEC0', 'normal', 'Sarabun,sans-serif');
+
+    // ── 15. Export ────────────────────────────────────────────────────────────
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isAnd = /android/i.test(navigator.userAgent);
     const isSaf = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
     const openAsImage = () => {
-      const dataUrl = certCanvas.toDataURL('image/png');
+      const dataUrl = cvs.toDataURL('image/png');
       const win = window.open('', '_blank');
       if (!win) {
-        // pop-up blocked → blob download
-        certCanvas.toBlob(blob => {
+        cvs.toBlob(blob => {
           const u = URL.createObjectURL(blob);
           const a = document.createElement('a'); a.href = u;
           a.download = 'XCMG-Certificate-' + state.user.id + '.png';
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
           setTimeout(() => URL.revokeObjectURL(u), 5000);
-        }, 'image/png');
-        return;
+        }, 'image/png'); return;
       }
       win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XCMG Certificate</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:12px}img{max-width:100%;height:auto;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6)}a{display:block;margin-top:12px;padding:10px 24px;background:#1B3A6B;color:#fff;text-decoration:none;border-radius:6px;font-family:sans-serif;font-size:14px;text-align:center}</style></head><body><img src="' + dataUrl + '" alt="Certificate"><a href="' + dataUrl + '" download="XCMG-Certificate.png">⬇ Save PNG</a></body></html>');
       win.document.close();
@@ -824,21 +940,18 @@ window.handleDownloadCert = async function() {
     if (isIOS || isAnd) {
       openAsImage();
     } else {
-      // Desktop: PDF first, fallback PNG
       const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF;
       if (jsPDFLib) {
         try {
-          const imgData = certCanvas.toDataURL('image/jpeg', 0.92);
+          const imgData = cvs.toDataURL('image/jpeg', 0.95);
           const doc = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' });
           doc.addImage(imgData, 'JPEG', 0, 0, 297, 210);
           doc.save('XCMG-Certificate-' + state.user.id + '.pdf');
-        } catch {
-          openAsImage();
-        }
+        } catch { openAsImage(); }
       } else if (isSaf) {
         openAsImage();
       } else {
-        certCanvas.toBlob(blob => {
+        cvs.toBlob(blob => {
           const u = URL.createObjectURL(blob);
           const a = document.createElement('a'); a.href = u;
           a.download = 'XCMG-Certificate-' + state.user.id + '.png';
