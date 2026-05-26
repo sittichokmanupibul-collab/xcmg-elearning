@@ -71,16 +71,62 @@ async function toSignedUrl(publicUrl) {
   } catch { return publicUrl; }
 }
 
-// ─── Font loading ─────────────────────────────────────────────────
+// ─── Font injection + loading (รองรับ Thai & Eng บน Canvas) ────────
+// วิธีนี้ inject <link> + <style> @font-face เพื่อบังคับให้ browser
+// โหลด Sarabun / Noto Sans Thai จริง ก่อนที่ canvas จะ render ข้อความ
+let _fontsLoaded = false;
 async function loadFonts() {
-  if (!document.fonts?.ready) return;
-  await document.fonts.ready;
-  if (document.fonts.load) {
-    await Promise.all([
-      document.fonts.load('400 16px Sarabun'),
-      document.fonts.load('700 16px Sarabun'),
-    ]).catch(() => {});
+  if (_fontsLoaded) return;
+  _fontsLoaded = true;
+
+  // 1. Inject Google Fonts link (Sarabun รองรับทั้งไทยและ Latin)
+  if (!document.getElementById('cert-gfonts')) {
+    const link = document.createElement('link');
+    link.id   = 'cert-gfonts';
+    link.rel  = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+Thai:wght@400;700&display=swap';
+    document.head.appendChild(link);
   }
+
+  // 2. ใช้ FontFace API โหลดตรงจาก Google Fonts CDN (ไม่ผ่าน CSS)
+  //    เพื่อให้แน่ใจว่า canvas สามารถเข้าถึง font ได้ทันที
+  const variants = [
+    { family: 'Sarabun',        weight: '400', url: 'https://fonts.gstatic.com/s/sarabun/v13/DtVjJx26TKEr37c9YLlr6Q.woff2' },
+    { family: 'Sarabun',        weight: '700', url: 'https://fonts.gstatic.com/s/sarabun/v13/DtVmJx26TKEr37c9YBVzpKlr.woff2' },
+    { family: 'Noto Sans Thai', weight: '400', url: 'https://fonts.gstatic.com/s/notosansthai/v20/iJWnBXeUZi_OHPqn4wq6hQ2_hbJ1xyN9wd43SofpTBiO_GQ.woff2' },
+    { family: 'Noto Sans Thai', weight: '700', url: 'https://fonts.gstatic.com/s/notosansthai/v20/iJWnBXeUZi_OHPqn4wq6hQ2_hbJ1xyN9wd43SofpTBiO_GQ.woff2' },
+  ];
+
+  const loads = variants.map(async ({ family, weight, url }) => {
+    try {
+      // ตรวจสอบก่อนว่า font โหลดแล้วหรือยัง
+      const alreadyLoaded = [...document.fonts].some(
+        f => f.family === family && f.weight === weight && f.status === 'loaded'
+      );
+      if (alreadyLoaded) return;
+
+      const ff = new FontFace(family, `url(${url})`, { weight, style: 'normal' });
+      const loaded = await ff.load();
+      document.fonts.add(loaded);
+    } catch {
+      // ถ้าโหลด woff2 ไม่ได้ → ข้ามไป ใช้ fallback
+    }
+  });
+
+  await Promise.allSettled(loads);
+
+  // 3. รอให้ document.fonts พร้อมทั้งหมด
+  if (document.fonts?.ready) await document.fonts.ready;
+
+  // 4. "warm-up" render: วาดอักขระไทยลง off-screen canvas ตัวเล็กก่อน
+  //    เพื่อบังคับให้ browser shape ตัวอักษรก่อน canvas หลัก render
+  const warmup = document.createElement('canvas');
+  warmup.width = warmup.height = 2;
+  const wCtx = warmup.getContext('2d');
+  wCtx.font = '700 1px Sarabun, Noto Sans Thai, Arial';
+  wCtx.fillText('กขคงจชซ', 0, 1);
+  wCtx.font = '400 1px Sarabun, Noto Sans Thai, Arial';
+  wCtx.fillText('abcdefg', 0, 1);
 }
 
 // ─── Helper: draw rounded rectangle path ─────────────────────────
@@ -156,14 +202,14 @@ function drawMedalSeal(ctx, cx, cy, r) {
   ctx.fill();
 
   // "CERTIFIED" text
-  ctx.font         = `700 ${Math.round(r * 0.165)}px Sarabun, Arial`;
+  ctx.font         = `700 ${Math.round(r * 0.165)}px "Sarabun", "Noto Sans Thai", Arial`;
   ctx.fillStyle    = XCMG_BLUE;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('CERTIFIED', cx, cy + r * 0.40);
 
   // "XCMG" text
-  ctx.font      = `700 ${Math.round(r * 0.195)}px Sarabun, Arial`;
+  ctx.font      = `700 ${Math.round(r * 0.195)}px "Sarabun", "Noto Sans Thai", Arial`;
   ctx.fillStyle = XCMG_BLUE;
   ctx.fillText('XCMG', cx, cy + r * 0.60);
 }
@@ -184,7 +230,7 @@ async function buildCertCanvas({ fullName, empInfo, certNumber, certDate, signat
   canvas.height = H;
   const ctx     = canvas.getContext('2d');
 
-  const FONT = 'Sarabun, Noto Sans Thai, Arial, sans-serif';
+  const FONT = '"Sarabun", "Noto Sans Thai", Arial, sans-serif';
 
   // 1. Cream background
   ctx.fillStyle = BG_CREAM;
