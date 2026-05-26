@@ -244,17 +244,47 @@ function renderTextImage(text, options = {}) {
   return canvas.toDataURL('image/png');
 }
 
+let _certFontsLoaded = false;
 async function loadCertificateFonts() {
-  if (!window.document?.fonts?.ready) return
-  await document.fonts.ready
-  if (document.fonts.load) {
-    await Promise.all([
-      document.fonts.load('400 16px Sarabun'),
-      document.fonts.load('700 16px Sarabun'),
-      document.fonts.load('400 16px Noto Sans Thai'),
-      document.fonts.load('700 16px Noto Sans Thai'),
-    ]).catch(() => {})
+  if (_certFontsLoaded) return;
+  _certFontsLoaded = true;
+
+  // Inject Google Fonts link เพื่อ preload Sarabun (รองรับ Thai + Latin ครบ)
+  if (!document.getElementById('cert-gfonts')) {
+    const link = document.createElement('link');
+    link.id   = 'cert-gfonts';
+    link.rel  = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;700&display=swap';
+    document.head.appendChild(link);
   }
+
+  // โหลด FontFace โดยตรงเพื่อให้ canvas ใช้ได้ทันที
+  const variants = [
+    { family: 'Sarabun', weight: '400', url: 'https://fonts.gstatic.com/s/sarabun/v13/DtVjJx26TKEr37c9YLlr6Q.woff2' },
+    { family: 'Sarabun', weight: '700', url: 'https://fonts.gstatic.com/s/sarabun/v13/DtVmJx26TKEr37c9YBVzpKlr.woff2' },
+    { family: 'Noto Sans Thai', weight: '400', url: 'https://fonts.gstatic.com/s/notosansthai/v20/iJWnBXeUZi_OHPqn4wq6hQ2_hbJ1xyN9wd43SofpTBiO_GQ.woff2' },
+    { family: 'Noto Sans Thai', weight: '700', url: 'https://fonts.gstatic.com/s/notosansthai/v20/iJWnBXeUZi_OHPqn4wq6hQ2_hbJ1xyN9wd43SofpTBiO_GQ.woff2' },
+  ];
+
+  await Promise.allSettled(variants.map(async ({ family, weight, url }) => {
+    try {
+      const already = [...document.fonts].some(f => f.family === family && f.weight === weight && f.status === 'loaded');
+      if (already) return;
+      const ff = new FontFace(family, `url(${url})`, { weight, style: 'normal' });
+      document.fonts.add(await ff.load());
+    } catch { /* fallback font ใช้แทน */ }
+  }));
+
+  if (document.fonts?.ready) await document.fonts.ready;
+
+  // Warm-up: บังคับให้ browser shape อักขระไทยก่อน canvas render จริง
+  const wc = document.createElement('canvas');
+  wc.width = wc.height = 2;
+  const wx = wc.getContext('2d');
+  wx.font = '700 1px Sarabun, Noto Sans Thai, sans-serif';
+  wx.fillText('กขคงจชซ', 0, 1);
+  wx.font = '400 1px Sarabun, Noto Sans Thai, sans-serif';
+  wx.fillText('ABCDEFabcdef', 0, 1);
 }
 
 // loadImageSafe — รองรับ base64, local path, และ Supabase URL (หลีกเลี่ยง CORS/taint)
@@ -655,10 +685,10 @@ function renderCertPreview() {
         <div class="cert-body">
           <div class="cert-declare">This is to certify that</div>
 
-          <div class="cert-name-field">\${name}</div>
+          <div class="cert-name-field">${name}</div>
 
           <div class="cert-emp-info">
-            Employee ID: \${empId} &nbsp;|&nbsp; Department: \${dept}
+            Employee ID: ${empId} &nbsp;|&nbsp; Department: ${dept}
           </div>
 
           <div class="cert-course-box">
@@ -679,7 +709,7 @@ function renderCertPreview() {
         <div class="cert-footer">
           <div class="cert-date-block">
             <div class="cert-date-label">DATE OF ISSUE</div>
-            <div class="cert-date-value">\${dateStr}</div>
+            <div class="cert-date-value">${dateStr}</div>
           </div>
           <div class="cert-seal">
             <div class="cert-seal-icon">🏅</div>
@@ -692,7 +722,7 @@ function renderCertPreview() {
           </div>
         </div>
 
-        <div class="cert-number">Certificate No.: \${certNum}</div>
+        <div class="cert-number">Certificate No.: ${certNum}</div>
       </div>
     </div>`
 }
@@ -835,8 +865,8 @@ window.handleDownloadCert = async function() {
     // ── 8. Declare ───────────────────────────────────────────────────────────
     tc('This is to certify that', 264, 15, '#4B5563', 'normal', 'Sarabun,sans-serif', 900*S);
 
-    // ── 9. Recipient name ────────────────────────────────────────────────────
-    tc(name, 318, 46, '#0B2545', '700', "Georgia,'Times New Roman',serif", 1000*S);
+    // ── 9. Recipient name — Sarabun รองรับทั้งไทยและ Eng ────────────────────
+    tc(name, 318, 46, '#0B2545', '700', "Sarabun,'Noto Sans Thai',Arial,sans-serif", 1000*S);
 
     // ── 10. Employee info ────────────────────────────────────────────────────
     tc('Employee ID: ' + empId + '   |   Department: ' + dept, 363, 14, '#4B5563', 'normal', 'Sarabun,sans-serif', 900*S);
