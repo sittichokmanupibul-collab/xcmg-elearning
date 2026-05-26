@@ -1,243 +1,401 @@
 import { supabase } from './supabase.js';
 
-const XCMG_BLUE = '#1B3A6B';
-const TEXT_DARK  = '#2C3E50';
+// ─── Brand colours ───────────────────────────────────────────────
+const XCMG_BLUE   = '#1B3A6B';
+const GOLD        = '#B8973A';
+const LIGHT_GOLD  = '#D4AF55';
+const TEXT_DARK   = '#2C3E50';
+const TEXT_MID    = '#4A5568';
+const BG_CREAM    = '#FBF8F0';
+const BORDER_GOLD = '#C9A84C';
 
-// โลโก้ XCMG Thailand (ภาพที่ผู้ใช้แนบมา)
+// ─── Embedded XCMG logo (webp → base64) ──────────────────────────
 const XCMG_LOGO_B64 = 'data:image/webp;base64,UklGRuwEAABXRUJQVlA4IOAEAAAQHQCdASo7ADgAPhUIg0EhBz6dqgQAUS2AFiSoL8A/ADrGHwcR/Fz9ZP850NerncT9qv87inH177O/dX/M/sA7QD9B/0u/kXsq9AD9bv6h/APfA/gHUAfqb///3/7gD9gPYA8or9dPgj/tn+A9In//3mp9A+lXp9fWP9gMuV9P4Qdpr7Vfxmy5LTJfzL+2/l5zAxzX9r/xP3Ieyb8g/tn+X/Lv6BP41/O/8j+af9g7+f66ewn+qR/v639ucMYnBcmxyhNOIP6kfY9jbQCdI47+2zNJQDPPibEgmwCvYbGvNO8zeiIb2KP3IHi9OCPEIcEAAP7/GlpiP12sSZtHaVf5O/zb0S3PAtHizWIB/vurR3Ybw+c61uBCH69ue1sfzlOADwjQWeZnY0fnB0jaXoKC+Emi+gcFXZXTJht/8JXl9+PSj8DgL9hMYJCy3ZN9DqMs0boZ8A3UA2HgZXY34cHjl9eX747DSq2EdicjI+UwqB9N81PoFYK9Kyi6b2xKi/wRO0Z4o8l712ZWent3u2945E5LOLQe96iJXtFIUe0L7NZg1tF+ih0OIb0yatz/AsDUjf6erv/+vf8txsC2Ou2Dn9IZj//TEQzPw2SZD2Iba7yHgqVJYv2yFNiR/Co0lJ1EMZlH/6ByVHBKVEBMSRhO+5ie6OFxJe7Pv3R4/N7ZHvq09o140v4+afcttQ1AtK/AtrOVsq55P52Rpg7wMoKE2INh2f5sbsZYgsOMypSIoyhO2fEtNuZpoqnibeMO5M31I7P0CEHxn2TpKRTJc5nrKxvhTB8pGNpzHUgup2D9CnmW/MTUbbYDO9HQUp/516nMVOL8nqwCNn9xOtyzLq1bN5r31n0ah/FaGU6Rg3iWauEQ6swfraW7GeLZTr5MUFRwKe/HdpnU14Yqrup2NxtINav13StnciMAgVDm0fWzDB8osrnWYeMoYW4gSawiLaVdU5tpNx3uis5X5fHk4HzNUGiIGguOkMHKeeFnmCZmYcq4iICH8RAnxnd3BBDNQxMyGAcBx9sc2IICgoju5LtxNUoa7+Lzn2aO/8QBydw6YG5YKF/uGNVTWG0dff4JRgoXbuOPNzSUFxTS1aBDattZcxlvd8jrFV4oEJWhj6EqT54sgv9snFKMrHv8f2U3GWSZx2P5eZsBq1DHUKBIooeOvS9cDDzC1wLizg+pX5PFzHfqcNaesPwbCNLKHsMTMeExpCzu/WhzJvfAdMfbpqzCBKEoxZOoxYclhjy0LpO6TNpg+LeOOgC8PJbrnUI8eIMqc107C+MdPUS4KdzSPyT42Izs2Aox8oio/7f/4m34ejpRxMjjRhzeBnS6/TAht5skDLi8ZUe7BCdv//epLCXaTwVnLoe5//8M69MTxAVdCbsUFkmQoo7vR1cP//5UI0fSwWCZ7h6cXvRYSds9RcvmwHY2dW/ntWjSotmobmk1bAOA5KJ/U+Mjpn8hD716JqgHu0DlCuTDpQqa/vIDiPaeSGkuWymu8Qs0BHUBtWw/v3v8D8c8MJU8Nbvw2sVCrzsaf39mjVf//1eIsTU6DdQEAW878/Lp/6pyv5jyavSVoKY0Vr//pLnSD7+v1uXyU+1ALUp7XLeLf2umtgcEJ2zFbAwiogvNiEbPu+58I0GXTH1Ro8JryocZqap3iZMAAAA=';
 
+// ─── Thai date formatter ──────────────────────────────────────────
 function formatThaiDate(dateString) {
-  const thaiMonths = [
+  const months = [
     'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน',
     'พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม',
     'กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม',
   ];
-  const date = dateString ? new Date(dateString) : new Date();
-  return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543}`;
+  const d = dateString ? new Date(dateString) : new Date();
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
 }
 
-const CERT_FONT_FAMILY = 'Sarabun, Noto Sans Thai, Arial, sans-serif';
-
-async function loadCertFonts() {
-  if (!window.document?.fonts?.ready) return;
-  await document.fonts.ready;
-  if (document.fonts.load) {
-    await Promise.all([
-      document.fonts.load('400 16px Sarabun'),
-      document.fonts.load('700 16px Sarabun'),
-      document.fonts.load('400 16px Noto Sans Thai'),
-      document.fonts.load('700 16px Noto Sans Thai'),
-    ]).catch(() => {});
-  }
-}
-
-// loadImage — รองรับทั้ง base64 data URL และ URL ภายนอก (Supabase Storage)
-// กรณี URL ภายนอก: fetch เป็น blob ก่อนเพื่อหลีกเลี่ยงปัญหา CORS canvas taint
+// ─── Load image from src (base64 or URL) ─────────────────────────
 async function loadImage(src) {
-  // data URL (base64) — โหลดตรงได้เลย ไม่มีปัญหา CORS
+  if (!src) return null;
   if (src.startsWith('data:')) {
-    return new Promise((resolve, reject) => {
+    return new Promise((res, rej) => {
       const img = new Image();
-      img.onload  = () => resolve(img);
-      img.onerror = () => reject(new Error('โหลด base64 image ไม่สำเร็จ'));
+      img.onload  = () => res(img);
+      img.onerror = () => rej(new Error('โหลด base64 image ไม่สำเร็จ'));
       img.src = src;
     });
   }
-
-  // URL ภายนอก — fetch เป็น blob ก่อน แล้วสร้าง object URL
-  // วิธีนี้หลีกเลี่ยง canvas taint และ CORS error ได้ในกรณีที่ server อนุญาต
   try {
-    const resp = await fetch(src);
+    const resp   = await fetch(src);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const blob    = await resp.blob();
-    const objUrl  = URL.createObjectURL(blob);
-    return new Promise((resolve, reject) => {
+    const blob   = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+    return new Promise((res, rej) => {
       const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(objUrl);
-        resolve(img);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objUrl);
-        reject(new Error(`โหลดภาพไม่สำเร็จ: ${src.slice(0, 80)}`));
-      };
+      img.onload  = () => { URL.revokeObjectURL(objUrl); res(img); };
+      img.onerror = () => { URL.revokeObjectURL(objUrl); rej(new Error('load failed')); };
       img.src = objUrl;
     });
-  } catch (fetchErr) {
-    // fetch ไม่สำเร็จ (เช่น CORS block fetch ด้วย) → fallback crossOrigin img tag
-    return new Promise((resolve, reject) => {
+  } catch {
+    return new Promise((res, rej) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload  = () => resolve(img);
-      img.onerror = () => reject(new Error(
-        `โหลดภาพแม่แบบไม่สำเร็จ กรุณาตรวจสอบ CORS ใน Supabase Storage: ${src.slice(0, 80)}`
-      ));
-      img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+      img.onload  = () => res(img);
+      img.onerror = () => rej(new Error('CORS load failed: ' + src.slice(0, 60)));
+      img.src = src + (src.includes('?') ? '&' : '?') + '_t=' + Date.now();
     });
   }
 }
 
-function renderTextToDataUrl(text, options = {}) {
-  const {
-    width = 1800, height = 200,
-    fontFamily = CERT_FONT_FAMILY,
-    fontWeight = 'bold',
-    color = XCMG_BLUE,
-    maxLineWidth = 1700,
-    initialFontSize = 72,
-  } = options;
-
-  const dpr = 2;
-  const canvas = document.createElement('canvas');
-  canvas.width  = width  * dpr;
-  canvas.height = height * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle    = color;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'center';
-
-  let fontSize = initialFontSize;
-  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-  while (ctx.measureText(text).width > maxLineWidth && fontSize > 24) {
-    fontSize -= 2;
-    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-  }
-  ctx.fillText(text, width / 2, height / 2);
-  return canvas.toDataURL('image/png');
-}
-
-// ─────────────────────────────────────────────────────────────────
-// แปลง Supabase Storage public URL → signed URL (60 วินาที)
-// แก้ปัญหา CORS ที่ทำให้ canvas ถูก taint และ toDataURL() ล้มเหลว
-// ─────────────────────────────────────────────────────────────────
+// ─── Convert Supabase public URL to signed URL (60 s) ────────────
 async function toSignedUrl(publicUrl) {
   if (!publicUrl) return null;
   try {
     const url   = new URL(publicUrl);
     const parts = url.pathname.split('/');
-    // Supabase public URL: /storage/v1/object/public/<bucket>/<path>
-    const bucketIdx = parts.indexOf('public');
-    if (bucketIdx === -1) return publicUrl;
-    const bucket   = parts[bucketIdx + 1];
-    const filePath = parts.slice(bucketIdx + 2).join('/');
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(filePath, 60);
-    if (error || !data?.signedUrl) return publicUrl;
-    return data.signedUrl;
-  } catch {
-    return publicUrl;
+    const idx   = parts.indexOf('public');
+    if (idx === -1) return publicUrl;
+    const bucket   = parts[idx + 1];
+    const filePath = parts.slice(idx + 2).join('/');
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 60);
+    return (error || !data?.signedUrl) ? publicUrl : data.signedUrl;
+  } catch { return publicUrl; }
+}
+
+// ─── Font loading ─────────────────────────────────────────────────
+async function loadFonts() {
+  if (!document.fonts?.ready) return;
+  await document.fonts.ready;
+  if (document.fonts.load) {
+    await Promise.all([
+      document.fonts.load('400 16px Sarabun'),
+      document.fonts.load('700 16px Sarabun'),
+    ]).catch(() => {});
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Build the full certificate as an HTML Canvas (A4 landscape @2×)
-// ─────────────────────────────────────────────────────────────────
-async function buildCertCanvas({ fullName, empInfo, certDate, templateUrl, signatureUrl }) {
-  await loadCertFonts();
+// ─── Helper: draw rounded rectangle path ─────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
 
-  // แปลงเป็น signed URL เพื่อหลีกเลี่ยง CORS (canvas taint)
-  const resolvedTemplateUrl  = await toSignedUrl(templateUrl);
-  const resolvedSignatureUrl = await toSignedUrl(signatureUrl);
+// ─── Helper: centred text with auto font-size shrink ─────────────
+function drawTextCentered(ctx, text, x, y, maxWidth, fontSize, weight, color, font) {
+  let fs = fontSize;
+  ctx.font = `${weight} ${fs}px ${font}`;
+  while (ctx.measureText(text).width > maxWidth && fs > 20) {
+    fs -= 2;
+    ctx.font = `${weight} ${fs}px ${font}`;
+  }
+  ctx.fillStyle    = color;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
 
-  const W  = 2970;   // 297 mm × 10
-  const H  = 2100;   // 210 mm × 10
+// ─── Draw "CERTIFIED XCMG" medal seal ────────────────────────────
+function drawMedalSeal(ctx, cx, cy, r) {
+  // Outer gold ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#F5E6B8';
+  ctx.fill();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Inner cream circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2);
+  ctx.fillStyle = '#FDF5DC';
+  ctx.fill();
+  ctx.strokeStyle = LIGHT_GOLD;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Top arc decoration
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.60, Math.PI, 0);
+  ctx.strokeStyle = '#C9943A';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  // 8-pointed star emblem
+  const starPoints = 8;
+  const outerR = r * 0.30;
+  const innerR = r * 0.14;
+  ctx.beginPath();
+  for (let i = 0; i < starPoints * 2; i++) {
+    const angle = (i * Math.PI) / starPoints - Math.PI / 2;
+    const rad   = i % 2 === 0 ? outerR : innerR;
+    const px    = cx + Math.cos(angle) * rad;
+    const py    = cy + Math.sin(angle) * rad - r * 0.10;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = GOLD;
+  ctx.fill();
+
+  // "CERTIFIED" text
+  ctx.font         = `700 ${Math.round(r * 0.165)}px Sarabun, Arial`;
+  ctx.fillStyle    = XCMG_BLUE;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('CERTIFIED', cx, cy + r * 0.40);
+
+  // "XCMG" text
+  ctx.font      = `700 ${Math.round(r * 0.195)}px Sarabun, Arial`;
+  ctx.fillStyle = XCMG_BLUE;
+  ctx.fillText('XCMG', cx, cy + r * 0.60);
+}
+
+// ─── Build the full certificate canvas ───────────────────────────
+async function buildCertCanvas({ fullName, empInfo, certNumber, certDate, signatureUrl }) {
+  await loadFonts();
+
+  const signedSigUrl = await toSignedUrl(signatureUrl);
+
+  // A4 landscape @ ~300 dpi
+  const W  = 3508;
+  const H  = 2480;
   const cx = W / 2;
 
-  const canvas = document.createElement('canvas');
+  const canvas  = document.createElement('canvas');
   canvas.width  = W;
   canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  const ctx     = canvas.getContext('2d');
 
-  // 1. Background template
-  if (resolvedTemplateUrl) {
-    const tpl = await loadImage(resolvedTemplateUrl);
-    ctx.drawImage(tpl, 0, 0, W, H);
-  } else {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
+  const FONT = 'Sarabun, Noto Sans Thai, Arial, sans-serif';
+
+  // 1. Cream background
+  ctx.fillStyle = BG_CREAM;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Outer gold double border
+  const PAD = 60;
+  ctx.strokeStyle = BORDER_GOLD;
+  ctx.lineWidth   = 14;
+  roundRect(ctx, PAD, PAD, W - PAD * 2, H - PAD * 2, 28);
+  ctx.stroke();
+
+  ctx.strokeStyle = BORDER_GOLD;
+  ctx.lineWidth   = 4;
+  roundRect(ctx, PAD + 32, PAD + 32, W - (PAD + 32) * 2, H - (PAD + 32) * 2, 18);
+  ctx.stroke();
+
+  // 3. Inner white card
+  const CP = 120;   // card padding
+  ctx.fillStyle   = '#FFFFFF';
+  roundRect(ctx, CP, CP, W - CP * 2, H - CP * 2, 40);
+  ctx.fill();
+  ctx.strokeStyle = '#E8E0D0';
+  ctx.lineWidth   = 4;
+  ctx.stroke();
+
+  // 4. Gold top banner "CERTIFICATE OF COMPLETION"
+  const BH = 132;  // banner height
+  const BY = CP;
+  ctx.beginPath();
+  ctx.moveTo(CP + 40, BY);
+  ctx.lineTo(W - CP - 40, BY);
+  ctx.quadraticCurveTo(W - CP, BY, W - CP, BY + 40);
+  ctx.lineTo(W - CP, BY + BH);
+  ctx.lineTo(CP, BY + BH);
+  ctx.lineTo(CP, BY + 40);
+  ctx.quadraticCurveTo(CP, BY, CP + 40, BY);
+  ctx.closePath();
+  ctx.fillStyle = GOLD;
+  ctx.fill();
+
+  ctx.font          = `700 64px ${FONT}`;
+  ctx.fillStyle     = '#FFFFFF';
+  ctx.textAlign     = 'center';
+  ctx.textBaseline  = 'middle';
+  ctx.fillText('CERTIFICATE OF COMPLETION', cx, BY + BH / 2);
+
+  // 5. Logo + brand name row
+  const LY = BY + BH + 110;
+  const LH = 230;
+  const LW = LH;
+
+  const logoImg = await loadImage(XCMG_LOGO_B64);
+  if (logoImg) {
+    ctx.drawImage(logoImg, cx - LW / 2 - 370, LY, LW, LH);
   }
 
-  // 2. Watermark — XCMG logo, 45 % opacity, centred
-  {
-    const logo = await loadImage(XCMG_LOGO_B64);
-    const wmW  = W * 0.55;
-    const wmH  = wmW * (logo.naturalHeight / logo.naturalWidth);
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.drawImage(logo, (W - wmW) / 2, (H - wmH) / 2, wmW, wmH);
-    ctx.restore();
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = XCMG_BLUE;
+  ctx.font         = `700 96px ${FONT}`;
+  ctx.fillText('XCMG Thailand', cx - LW / 2 - 95, LY + LH * 0.34);
+
+  ctx.font      = `400 56px ${FONT}`;
+  ctx.fillStyle = TEXT_MID;
+  ctx.fillText('XCMG KNOWLEDGE ACADEMY', cx - LW / 2 - 95, LY + LH * 0.72);
+
+  // 6. "CERTIFICATE" heading
+  const HY = LY + LH + 150;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = XCMG_BLUE;
+  ctx.font         = `700 185px ${FONT}`;
+  ctx.fillText('CERTIFICATE', cx, HY);
+
+  ctx.font      = `400 70px ${FONT}`;
+  ctx.fillStyle = TEXT_MID;
+  ctx.fillText('CERTIFICATE OF COMPLETION', cx, HY + 148);
+
+  // 7. "This is to certify that"
+  const CY = HY + 295;
+  ctx.font      = `400 66px ${FONT}`;
+  ctx.fillStyle = TEXT_DARK;
+  ctx.fillText('This is to certify that', cx, CY);
+
+  // 8. Recipient name — large, XCMG blue, bold; supports Thai & English
+  const NY = CY + 185;
+  drawTextCentered(ctx, fullName || 'ชื่อผู้รับใบประกาศ', cx, NY, W - CP * 2 - 200, 205, '700', XCMG_BLUE, FONT);
+
+  // 9. Employee ID | Department line
+  const IY = NY + 195;
+  ctx.font      = `400 62px ${FONT}`;
+  ctx.fillStyle = TEXT_MID;
+  ctx.textAlign = 'center';
+  ctx.fillText(empInfo || '', cx, IY);
+
+  // 10. Course info box (light blue)
+  const BW = 1950;
+  const BXH = 318;
+  const BX  = cx - BW / 2;
+  const BXY = IY + 135;
+
+  roundRect(ctx, BX, BXY, BW, BXH, 26);
+  ctx.fillStyle   = '#EBF3FC';
+  ctx.fill();
+  ctx.strokeStyle = '#B5D4F4';
+  ctx.lineWidth   = 3;
+  ctx.stroke();
+
+  ctx.font         = `700 52px ${FONT}`;
+  ctx.fillStyle    = '#185FA5';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('COURSE', cx, BXY + 88);
+
+  ctx.font      = `700 72px ${FONT}`;
+  ctx.fillStyle = XCMG_BLUE;
+  ctx.fillText('XCMG Product Knowledge', cx, BXY + 190);
+
+  ctx.font      = `400 52px ${FONT}`;
+  ctx.fillStyle = TEXT_MID;
+  ctx.fillText('XCMG Product Knowledge E-Learning', cx, BXY + 268);
+
+  // 11. Body text
+  const TY = BXY + BXH + 125;
+  ctx.font      = `400 57px ${FONT}`;
+  ctx.fillStyle = TEXT_DARK;
+  ctx.fillText('has successfully completed the above course with diligence and dedication, demonstrating a', cx, TY);
+  ctx.fillText('comprehensive understanding of XCMG product standards and operational practices as required.', cx, TY + 88);
+
+  // 12. Bottom: Date | Medal | Signature
+  const BOT = TY + 270;
+
+  // Date of issue (left)
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  ctx.font         = `700 46px ${FONT}`;
+  ctx.fillStyle    = TEXT_MID;
+  ctx.fillText('DATE OF ISSUE', CP + 200, BOT);
+
+  ctx.font      = `700 80px ${FONT}`;
+  ctx.fillStyle = XCMG_BLUE;
+  ctx.fillText(formatThaiDate(certDate), CP + 200, BOT + 72);
+
+  // Medal seal (centre)
+  drawMedalSeal(ctx, cx, BOT + 135, 190);
+
+  // Signature (right)
+  const SX = W - CP - 200;
+  if (signedSigUrl) {
+    try {
+      const sigImg = await loadImage(signedSigUrl);
+      if (sigImg) {
+        const SW = 490;
+        const SH = 185;
+        ctx.drawImage(sigImg, SX - SW, BOT - 20, SW, SH);
+      }
+    } catch { /* skip */ }
   }
 
-  // 3. Logo top area — new XCMG Thailand logo
-  {
-    const logo = await loadImage(XCMG_LOGO_B64);
-    const lW   = 380;
-    const lH   = lW * (logo.naturalHeight / logo.naturalWidth);
-    ctx.drawImage(logo, cx - lW / 2, 55, lW, lH);
-  }
+  ctx.beginPath();
+  ctx.moveTo(SX - 580, BOT + 180);
+  ctx.lineTo(SX, BOT + 180);
+  ctx.strokeStyle = '#CBD5E0';
+  ctx.lineWidth   = 3;
+  ctx.stroke();
 
-  // 4. Full name
-  if (fullName) {
-    const nameImg = await loadImage(renderTextToDataUrl(fullName, {
-      width: 2400, height: 300, initialFontSize: 96,
-      color: XCMG_BLUE, fontWeight: 'bold',
-    }));
-    const nW = 3600, nH = 450;
-    ctx.drawImage(nameImg, cx - nW / 2, 1080, nW, nH);
-  }
+  ctx.textAlign    = 'right';
+  ctx.textBaseline = 'top';
+  ctx.font         = `700 52px ${FONT}`;
+  ctx.fillStyle    = TEXT_DARK;
+  ctx.fillText('Training Director', SX, BOT + 196);
 
-  // 5. Employee info
-  if (empInfo) {
-    const infoImg = await loadImage(renderTextToDataUrl(empInfo, {
-      width: 2400, height: 180, initialFontSize: 42,
-      color: TEXT_DARK, fontWeight: 'normal',
-    }));
-    ctx.drawImage(infoImg, cx - 1500, 1340, 3000, 225);
-  }
+  ctx.font      = `400 46px ${FONT}`;
+  ctx.fillStyle = TEXT_MID;
+  ctx.fillText('XCMG Thailand Co., Ltd.', SX, BOT + 262);
 
-  // 6. Date
-  const dateImg = await loadImage(renderTextToDataUrl(
-    `ให้ไว้ ณ วันที่ ${formatThaiDate(certDate)}`,
-    { width: 2400, height: 180, initialFontSize: 45, color: TEXT_DARK, fontWeight: 'normal' }
-  ));
-  ctx.drawImage(dateImg, cx - 1350, 1530, 2700, 195);
+  // 13. Divider + cert number
+  const CNY = H - CP - 135;
+  ctx.beginPath();
+  ctx.moveTo(CP + 100, CNY - 28);
+  ctx.lineTo(W - CP - 100, CNY - 28);
+  ctx.strokeStyle = '#E2D9C8';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
 
-  // 7. Signature
-  if (resolvedSignatureUrl) {
-    const sig = await loadImage(resolvedSignatureUrl);
-    ctx.drawImage(sig, 2050, 1590, 675, 270);
-  }
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font         = `400 50px ${FONT}`;
+  ctx.fillStyle    = TEXT_MID;
+  ctx.fillText(`Certificate No.: ${certNumber || '-'}`, cx, CNY + 28);
 
   return canvas;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Cross-platform download
-// ─────────────────────────────────────────────────────────────────
+// ─── Platform-aware download helper ──────────────────────────────
 function triggerDownload(blob, filename) {
   const url      = URL.createObjectURL(blob);
   const isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
   if (isIOS || isSafari) {
-    // iOS Safari: open blob in new tab — user presses long-tap → Save
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
     const a = document.createElement('a');
-    a.href     = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 }
 
-// PNG path — works on every platform
 async function exportAsPNG(userId, params) {
   const canvas = await buildCertCanvas(params);
   return new Promise((resolve, reject) => {
@@ -249,7 +407,6 @@ async function exportAsPNG(userId, params) {
   });
 }
 
-// PDF path — desktop with jsPDF loaded; falls back to PNG
 async function exportAsPDF(userId, params) {
   const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF;
   if (!jsPDFLib) return exportAsPNG(userId, params);
@@ -261,7 +418,6 @@ async function exportAsPDF(userId, params) {
 
   const isAndroid = /android/i.test(navigator.userAgent);
   const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
   if (isIOS || isAndroid) {
     window.open(doc.output('bloburl'), '_blank');
   } else {
@@ -269,21 +425,22 @@ async function exportAsPDF(userId, params) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Public exports
-// ─────────────────────────────────────────────────────────────────
+// ─── Public exports ───────────────────────────────────────────────
 
 /**
- * downloadCertPDF — ดาวน์โหลดใบประกาศ
- *   Desktop      → PDF (หรือ PNG ถ้าไม่มี jsPDF)
- *   iOS/Android  → PNG เปิดใน tab ใหม่ (กดค้าง → บันทึก)
+ * downloadCertPDF
+ * @param {string} userId
+ * @param {string} fullName     — ชื่อ-นามสกุล (รองรับทั้งไทยและ Eng)
+ * @param {string} empInfo      — "Employee ID: xxx | Department: yyy"
+ * @param {string} certNumber   — เลขใบเซอร์ฯ
+ * @param {string} certDate     — ISO date string
+ * @param {string} signatureUrl — Supabase Storage URL ของลายเซ็น (optional)
  */
-export async function downloadCertPDF(userId, fullName, empInfo, certDate, templateUrl, signatureUrl) {
+export async function downloadCertPDF(userId, fullName, empInfo, certNumber, certDate, signatureUrl) {
   try {
-    const params   = { fullName, empInfo, certDate, templateUrl, signatureUrl };
-    const isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const params    = { fullName, empInfo, certNumber, certDate, signatureUrl };
+    const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isAndroid = /android/i.test(navigator.userAgent);
-
     if (isIOS || isAndroid) {
       await exportAsPNG(userId, params);
     } else {
@@ -298,9 +455,9 @@ export async function downloadCertPDF(userId, fullName, empInfo, certDate, templ
 /**
  * previewCertPDF — เปิดพรีวิวในแท็บใหม่ (ทุกแพลตฟอร์ม)
  */
-export async function previewCertPDF(userId, fullName, empInfo, certDate, templateUrl, signatureUrl) {
+export async function previewCertPDF(userId, fullName, empInfo, certNumber, certDate, signatureUrl) {
   try {
-    const params  = { fullName, empInfo, certDate, templateUrl, signatureUrl };
+    const params  = { fullName, empInfo, certNumber, certDate, signatureUrl };
     const canvas  = await buildCertCanvas(params);
     const imgData = canvas.toDataURL('image/png');
     const win     = window.open('', '_blank');
@@ -316,10 +473,11 @@ export async function previewCertPDF(userId, fullName, empInfo, certDate, templa
          align-items:center;justify-content:center;min-height:100vh;padding:16px}
     img{max-width:100%;height:auto;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6)}
     a{display:block;margin-top:14px;padding:10px 28px;background:#1B3A6B;
-      color:#fff;text-decoration:none;border-radius:6px;font-family:sans-serif;font-size:15px}
+      color:#fff;text-decoration:none;border-radius:6px;font-family:sans-serif;
+      font-size:15px;text-align:center}
   </style>
 </head><body>
-  <img src="${imgData}" alt="ใบประกาศ">
+  <img src="${imgData}" alt="ใบประกาศ XCMG">
   <a href="${imgData}" download="XCMG-Certificate-${userId}.png">⬇ ดาวน์โหลด PNG</a>
 </body></html>`);
     win.document.close();
