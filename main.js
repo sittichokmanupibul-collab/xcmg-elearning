@@ -1012,10 +1012,6 @@ window.handleDownloadCert = async function() {
     tc('Certificate No.: ' + certNum, 718, 11, '#A0AEC0', 'normal', 'Sarabun,sans-serif');
 
     // ── 15. Export ────────────────────────────────────────────────────────────
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isAnd = /android/i.test(navigator.userAgent);
-    const isMob = isIOS || isAnd;
-
     // helper: canvas → Blob (Promise)
     const toBlob = (canvas, mime, q) => new Promise((res, rej) =>
       canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), mime, q)
