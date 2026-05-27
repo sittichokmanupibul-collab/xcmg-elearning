@@ -746,6 +746,66 @@ async function issueCertificate(percent) {
   }
 }
 
+// ─── Mobile certificate overlay (แทน popup ที่ถูกบล็อก) ─────────────────────
+function showCertOverlay(canvas, blob, fileName) {
+  const existing = document.getElementById('cert-mobile-overlay');
+  if (existing) existing.remove();
+
+  const imgUrl = URL.createObjectURL(blob);
+  const overlay = document.createElement('div');
+  overlay.id = 'cert-mobile-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);
+    display:flex;flex-direction:column;align-items:center;
+    padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  `;
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:680px;padding-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="color:#fff;font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700">📜 ใบประกาศ XCMG</span>
+        <button id="_cert_close" style="background:rgba(255,255,255,.15);border:none;color:#fff;
+          padding:8px 16px;border-radius:8px;font-size:14px;cursor:pointer;font-family:sans-serif">✕ ปิด</button>
+      </div>
+      <img src="${imgUrl}" alt="ใบประกาศ XCMG"
+           style="width:100%;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.6);display:block">
+      <p style="color:rgba(255,255,255,.6);font-family:'Sarabun',sans-serif;font-size:13px;
+         text-align:center;margin:10px 0 4px">
+        กดค้างที่รูปภาพแล้วเลือก "บันทึกรูปภาพ" หรือกดปุ่มด้านล่าง
+      </p>
+      <button id="_cert_save" style="width:100%;margin-top:8px;padding:15px;
+        background:#1B3A6B;color:#fff;border:none;border-radius:10px;
+        font-size:16px;font-family:'Sarabun',sans-serif;cursor:pointer;font-weight:700">
+        ⬇ บันทึก / แชร์ใบประกาศ
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('_cert_close').onclick = () => {
+    overlay.remove();
+    URL.revokeObjectURL(imgUrl);
+  };
+  document.getElementById('_cert_save').onclick = async () => {
+    // ลองอีกครั้งด้วย share API (user ต้องกดปุ่มเอง → iOS อนุญาต)
+    const file = new File([blob], fileName, { type: blob.type });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'ใบประกาศ XCMG' });
+        overlay.remove(); URL.revokeObjectURL(imgUrl);
+        showToast('✅ บันทึกสำเร็จ!');
+        return;
+      } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    // fallback: anchor download (Android Chrome)
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(u), 8000);
+    showToast('✅ กำลังดาวน์โหลด...');
+  };
+}
+
 window.handleDownloadCert = async function() {
   if (!state.user)               { alert('User not found. Please refresh and try again.'); return }
   if (!state.lastResult?.passed) { alert('You must pass the test before downloading the certificate.'); return }
@@ -757,8 +817,13 @@ window.handleDownloadCert = async function() {
   try {
     await loadCertificateFonts();
 
-    // Canvas: 1200×849 px @ 3× scale ≈ A4 landscape
-    const S = 3;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAnd = /android/i.test(navigator.userAgent);
+    const isMob = isIOS || isAnd;
+
+    // mobile ลด scale เหลือ 1.5 (~screen resolution) เพื่อป้องกัน memory crash
+    // desktop ยังคง 3 (~300 dpi สำหรับ PDF)
+    const S = isMob ? 1.5 : 3;
     const W = 1200 * S, H = 849 * S;
     const cvs = document.createElement('canvas');
     cvs.width = W; cvs.height = H;
@@ -949,27 +1014,36 @@ window.handleDownloadCert = async function() {
     // ── 15. Export ────────────────────────────────────────────────────────────
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isAnd = /android/i.test(navigator.userAgent);
-    const isSaf = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isMob = isIOS || isAnd;
 
-    const openAsImage = () => {
-      const dataUrl = cvs.toDataURL('image/png');
-      const win = window.open('', '_blank');
-      if (!win) {
-        cvs.toBlob(blob => {
-          const u = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = u;
-          a.download = 'XCMG-Certificate-' + state.user.id + '.png';
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(u), 5000);
-        }, 'image/png'); return;
+    // helper: canvas → Blob (Promise)
+    const toBlob = (canvas, mime, q) => new Promise((res, rej) =>
+      canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), mime, q)
+    );
+
+    if (isMob) {
+      // Mobile: ลองใช้ Web Share API ก่อน (iOS Safari / Android Chrome รองรับดี)
+      // ส่งเป็น JPEG เพื่อลดขนาดไฟล์และผ่าน iOS share sheet ได้เร็วขึ้น
+      const blob = await toBlob(cvs, 'image/jpeg', 0.88);
+      const fileName = 'XCMG-Certificate-' + state.user.id + '.jpg';
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'ใบประกาศ XCMG' });
+          showToast('✅ บันทึกสำเร็จ!');
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            // share ล้มเหลว → fallback: overlay preview
+            showCertOverlay(cvs, blob, fileName);
+          }
+        }
+      } else {
+        // Web Share API ไม่รองรับ → แสดง overlay ในหน้าเดิม (ไม่ใช้ popup)
+        showCertOverlay(cvs, blob, fileName);
       }
-      win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XCMG Certificate</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:12px}img{max-width:100%;height:auto;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6)}a{display:block;margin-top:12px;padding:10px 24px;background:#1B3A6B;color:#fff;text-decoration:none;border-radius:6px;font-family:sans-serif;font-size:14px;text-align:center}</style></head><body><img src="' + dataUrl + '" alt="Certificate"><a href="' + dataUrl + '" download="XCMG-Certificate.png">⬇ Save PNG</a></body></html>');
-      win.document.close();
-    };
-
-    if (isIOS || isAnd) {
-      openAsImage();
     } else {
+      // Desktop: บันทึกเป็น PDF
       const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF;
       if (jsPDFLib) {
         try {
@@ -977,21 +1051,27 @@ window.handleDownloadCert = async function() {
           const doc = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' });
           doc.addImage(imgData, 'JPEG', 0, 0, 297, 210);
           doc.save('XCMG-Certificate-' + state.user.id + '.pdf');
-        } catch { openAsImage(); }
-      } else if (isSaf) {
-        openAsImage();
-      } else {
-        cvs.toBlob(blob => {
+          showToast('📥 Certificate downloaded successfully!');
+        } catch {
+          // jsPDF ล้มเหลว → fallback PNG
+          const blob = await toBlob(cvs, 'image/png', 1);
           const u = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = u;
-          a.download = 'XCMG-Certificate-' + state.user.id + '.png';
+          const a = document.createElement('a');
+          a.href = u; a.download = 'XCMG-Certificate-' + state.user.id + '.png';
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
           setTimeout(() => URL.revokeObjectURL(u), 5000);
-        }, 'image/png');
+          showToast('📥 Certificate downloaded successfully!');
+        }
+      } else {
+        const blob = await toBlob(cvs, 'image/png', 1);
+        const u = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = u; a.download = 'XCMG-Certificate-' + state.user.id + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(u), 5000);
+        showToast('📥 Certificate downloaded successfully!');
       }
     }
-
-    showToast('📥 Certificate downloaded successfully!');
 
   } catch (error) {
     console.error('Certificate generation failed:', error);
