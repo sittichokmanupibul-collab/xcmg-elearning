@@ -215,20 +215,23 @@ function drawMedalSeal(ctx, cx, cy, r) {
 }
 
 // ─── Build the full certificate canvas ───────────────────────────
-async function buildCertCanvas({ fullName, empInfo, certNumber, certDate, signatureUrl }) {
+async function buildCertCanvas({ fullName, empInfo, certNumber, certDate, signatureUrl }, scaleFactor = 1) {
   await loadFonts();
 
   const signedSigUrl = await toSignedUrl(signatureUrl);
 
-  // A4 landscape @ ~300 dpi
-  const W  = 3508;
-  const H  = 2480;
+  // A4 landscape — ลดขนาดสำหรับ mobile เพื่อหลีกเลี่ยง memory limit
+  const W  = Math.round(3508 * scaleFactor);
+  const H  = Math.round(2480 * scaleFactor);
   const cx = W / 2;
 
   const canvas  = document.createElement('canvas');
   canvas.width  = W;
   canvas.height = H;
   const ctx     = canvas.getContext('2d');
+
+  // Scale ทุกอย่างตาม scaleFactor โดยไม่ต้องแก้ค่าพิกัดทีละจุด
+  ctx.scale(scaleFactor, scaleFactor);
 
   const FONT = '"Sarabun", "Noto Sans Thai", Arial, sans-serif';
 
@@ -426,49 +429,78 @@ async function buildCertCanvas({ fullName, empInfo, certNumber, certDate, signat
   return canvas;
 }
 
-// ─── Platform-aware download helper ──────────────────────────────
-function triggerDownload(blob, filename) {
-  const url      = URL.createObjectURL(blob);
-  const isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  if (isIOS || isSafari) {
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } else {
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-}
+// ─── Device detection helpers ─────────────────────────────────────
+function isIOS()     { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function isAndroid() { return /android/i.test(navigator.userAgent); }
+function isMobile()  { return isIOS() || isAndroid(); }
+// scaleFactor สำหรับ mobile: ลดเหลือ 50% (~150 dpi) เพื่อประหยัด memory
+// desktop ยังคง 100% (300 dpi)
+function getScaleFactor() { return isMobile() ? 0.5 : 1; }
 
-async function exportAsPNG(userId, params) {
-  const canvas = await buildCertCanvas(params);
+// ─── Canvas → Blob (Promise wrapper) ─────────────────────────────
+function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.92) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(blob => {
-      if (!blob) return reject(new Error('สร้าง PNG ไม่สำเร็จ'));
-      triggerDownload(blob, `XCMG-Certificate-${userId}.png`);
-      resolve();
-    }, 'image/png');
+      blob ? resolve(blob) : reject(new Error('สร้าง image blob ไม่สำเร็จ'));
+    }, type, quality);
   });
 }
 
+// ─── Platform-aware download / share ─────────────────────────────
+async function triggerDownload(blob, filename) {
+  // 1. Web Share API — รองรับ iOS Safari, Android Chrome (แนะนำสำหรับ mobile)
+  if (isMobile() && navigator.canShare?.({ files: [new File([blob], filename, { type: blob.type })] })) {
+    try {
+      await navigator.share({
+        files: [new File([blob], filename, { type: blob.type })],
+        title: 'ใบประกาศ XCMG',
+      });
+      return;
+    } catch (err) {
+      // ถ้า user ยกเลิก share หรือ error → fall through ไป method ถัดไป
+      if (err.name === 'AbortError') return;
+    }
+  }
+
+  // 2. Standard anchor download — ใช้ได้บน desktop และ Android Chrome
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+}
+
+// ─── Export as PNG (ใช้ JPEG บน mobile เพื่อลดขนาดไฟล์) ─────────
+async function exportAsPNG(userId, params) {
+  const scale  = getScaleFactor();
+  const canvas = await buildCertCanvas(params, scale);
+  // mobile → JPEG (เล็กกว่า, load ไวกว่า), desktop → PNG (คมชัดกว่า)
+  const [mimeType, ext, quality] = isMobile()
+    ? ['image/jpeg', 'jpg', 0.90]
+    : ['image/png',  'png', 1];
+  const blob = await canvasToBlob(canvas, mimeType, quality);
+  await triggerDownload(blob, `XCMG-Certificate-${userId}.${ext}`);
+}
+
+// ─── Export as PDF ────────────────────────────────────────────────
 async function exportAsPDF(userId, params) {
+  // mobile ใช้ PNG/JPEG แทน PDF เพราะ jsPDF หนักและ mobile browser เปิด PDF ได้ยาก
+  if (isMobile()) return exportAsPNG(userId, params);
+
   const jsPDFLib = window.jspdf?.jsPDF ?? window.jsPDF;
   if (!jsPDFLib) return exportAsPNG(userId, params);
 
-  const canvas  = await buildCertCanvas(params);
+  const canvas  = await buildCertCanvas(params, 1);
   const imgData = canvas.toDataURL('image/jpeg', 0.95);
   const doc     = new jsPDFLib({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   doc.addImage(imgData, 'JPEG', 0, 0, 297, 210);
-
-  const isAndroid = /android/i.test(navigator.userAgent);
-  const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isIOS || isAndroid) {
-    window.open(doc.output('bloburl'), '_blank');
-  } else {
-    doc.save(`XCMG-Certificate-${userId}.pdf`);
-  }
+  doc.save(`XCMG-Certificate-${userId}.pdf`);
 }
 
 // ─── Public exports ───────────────────────────────────────────────
@@ -484,14 +516,8 @@ async function exportAsPDF(userId, params) {
  */
 export async function downloadCertPDF(userId, fullName, empInfo, certNumber, certDate, signatureUrl) {
   try {
-    const params    = { fullName, empInfo, certNumber, certDate, signatureUrl };
-    const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isAndroid = /android/i.test(navigator.userAgent);
-    if (isIOS || isAndroid) {
-      await exportAsPNG(userId, params);
-    } else {
-      await exportAsPDF(userId, params);
-    }
+    const params = { fullName, empInfo, certNumber, certDate, signatureUrl };
+    await exportAsPDF(userId, params);
   } catch (err) {
     console.error(err);
     alert('เกิดข้อผิดพลาดในการดาวน์โหลด: ' + err.message);
@@ -499,16 +525,64 @@ export async function downloadCertPDF(userId, fullName, empInfo, certNumber, cer
 }
 
 /**
- * previewCertPDF — เปิดพรีวิวในแท็บใหม่ (ทุกแพลตฟอร์ม)
+ * previewCertPDF — แสดงพรีวิวใบประกาศ
+ * - Desktop: เปิด popup tab พร้อมปุ่มดาวน์โหลด
+ * - Mobile:  แสดง inline ในหน้าเดิม (overlay) เพราะ popup ถูกบล็อก
  */
 export async function previewCertPDF(userId, fullName, empInfo, certNumber, certDate, signatureUrl) {
   try {
-    const params  = { fullName, empInfo, certNumber, certDate, signatureUrl };
-    const canvas  = await buildCertCanvas(params);
-    const imgData = canvas.toDataURL('image/png');
-    const win     = window.open('', '_blank');
-    if (!win) { alert('กรุณาอนุญาต Pop-up แล้วลองใหม่'); return; }
-    win.document.write(`<!DOCTYPE html>
+    const params = { fullName, empInfo, certNumber, certDate, signatureUrl };
+    const scale  = getScaleFactor();
+    const canvas = await buildCertCanvas(params, scale);
+
+    if (isMobile()) {
+      // ── Mobile: แสดง overlay ในหน้าเดิม ──────────────────────────
+      const existingOverlay = document.getElementById('cert-preview-overlay');
+      if (existingOverlay) existingOverlay.remove();
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.88);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cert-preview-overlay';
+      overlay.style.cssText = `
+        position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);
+        display:flex;flex-direction:column;align-items:center;
+        justify-content:flex-start;padding:16px;overflow-y:auto;
+      `;
+
+      overlay.innerHTML = `
+        <div style="width:100%;max-width:700px;padding-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="color:#fff;font-family:sans-serif;font-size:16px;font-weight:700">ใบประกาศ XCMG</span>
+            <button id="cert-close-btn" style="background:rgba(255,255,255,.15);border:none;color:#fff;
+              padding:8px 16px;border-radius:6px;font-size:14px;cursor:pointer">✕ ปิด</button>
+          </div>
+          <img src="${imgData}" alt="ใบประกาศ XCMG"
+               style="width:100%;border-radius:6px;box-shadow:0 4px 24px rgba(0,0,0,.6);display:block">
+          <button id="cert-dl-btn" style="width:100%;margin-top:14px;padding:14px;
+            background:#1B3A6B;color:#fff;border:none;border-radius:8px;
+            font-size:16px;font-family:sans-serif;cursor:pointer">
+            ⬇ บันทึกรูปภาพ / แชร์
+          </button>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      document.getElementById('cert-close-btn').onclick = () => overlay.remove();
+      document.getElementById('cert-dl-btn').onclick = async () => {
+        try {
+          const blob = await canvasToBlob(canvas, 'image/jpeg', 0.90);
+          await triggerDownload(blob, `XCMG-Certificate-${userId}.jpg`);
+        } catch (e) { alert('ไม่สามารถบันทึกได้: ' + e.message); }
+      };
+
+    } else {
+      // ── Desktop: เปิด popup tab ────────────────────────────────────
+      const imgData = canvas.toDataURL('image/png');
+      const win = window.open('', '_blank');
+      if (!win) { alert('กรุณาอนุญาต Pop-up แล้วลองใหม่'); return; }
+      win.document.write(`<!DOCTYPE html>
 <html><head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -526,7 +600,8 @@ export async function previewCertPDF(userId, fullName, empInfo, certNumber, cert
   <img src="${imgData}" alt="ใบประกาศ XCMG">
   <a href="${imgData}" download="XCMG-Certificate-${userId}.png">⬇ ดาวน์โหลด PNG</a>
 </body></html>`);
-    win.document.close();
+      win.document.close();
+    }
   } catch (err) {
     console.error(err);
     alert('ไม่สามารถเปิดพรีวิวได้: ' + err.message);
